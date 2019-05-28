@@ -1,5 +1,5 @@
 {
-  "name": "image-diff",
+  "name": "lcs-image-diff",
   "version": "1.0.0-rc.1",
   "description": "A javascript library to diff two images. Uses the Longest-Common-Subsequence algorithm to allow content to shift. ",
   "main": "src/index.js",
