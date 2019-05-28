@@ -1,0 +1,21 @@
+{
+  "name": "image-diff",
+  "version": "1.0.0",
+  "description": "A javascript library to diff two images. Uses the Longest-Common-Subsequence algorithm to allow content to shift. ",
+  "main": "src/index.js",
+  "author": "Henric Trotzig <henric.trotzig@happo.io>",
+  "contributors": [
+    "Joe Lencioni <joe.lencioni@airbnb.com> (https://github.com/lencioni)"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "imagetracerjs": "^1.2.5"
+  },
+  "devDependencies": {
+    "jest": "^24.8.0",
+    "jimp": "^0.6.4"
+  }
+}
