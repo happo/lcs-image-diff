@@ -29,8 +29,9 @@ image manipulation from the main thread.
 ```js
 const imageDiff = require('lcs-image-diff');
 
-// `image1` and `image2` is instances of `ImageData`
+// `image1` and `image2` are instances of `ImageData`
 // https://developer.mozilla.org/en-US/docs/Web/API/ImageData
+// https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/getImageData
 const { data, width, height, diff } = imageDiff(image1, image2);
 
 // `data` is a `UInt8ClampedArray`
@@ -101,8 +102,8 @@ document.getElementById('#trace-svg').style.margin = `0 ${
 
 ## Authors
 
-- Henric Trotzig (@trotzig)
-- Joe Lencioni (@lencioni)
+- Henric Trotzig ([@trotzig](https://github.com/trotzig))
+- Joe Lencioni ([@lencioni](https://github.com/lencioni))
 
 ---------------------
 
