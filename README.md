@@ -8,6 +8,13 @@ align the two images (vertically). This will prevent unnecessarily big diffs
 for images where content has shifted up or down. Works in the browser and in
 Node.
 
+## Examples
+Image 1 | Image 2 | Image diff | Traced
+------- | ------- | ---------- | ---------
+![Image 1](https://happo.io/img/happo-io/0ce6187c17100958ad2aa43ce794ede9) | ![Image 2](https://happo.io/img/happo-io/831d05205dd6a094ae8cc5136824b77c) | ![Image diff](https://happo.io/accounts/8/diff/%2Fimg%2Fhappo-io%2F0ce6187c17100958ad2aa43ce794ede9/%2Fimg%2Fhappo-io%2F831d05205dd6a094ae8cc5136824b77c) | ![Diff with trace](trace-example-card.png)
+![Image 1](https://happo.io/img/happo-io/ec485da33ce443baa327783cc7643431) | ![Image 2](https://happo.io/img/happo-io/3c65f11313f8ba196e4da06f39e50692) | ![Image diff](https://happo.io/accounts/8/diff/%2Fimg%2Fhappo-io%2Fec485da33ce443baa327783cc7643431/%2Fimg%2Fhappo-io%2F3c65f11313f8ba196e4da06f39e50692) | ![Diff with trace](trace-example-button.png)
+
+
 ## Installation
 
 ```bash
