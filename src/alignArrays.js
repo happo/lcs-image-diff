@@ -6,7 +6,7 @@ const MOVEMENT = {
 };
 
 const PLACEHOLDER = '+';
-const DRIFT_RANGE = 200;
+const MIN_DRIFT_RANGE = 200;
 
 /**
  * Creates a 2d matrix of a certain size.
@@ -39,7 +39,7 @@ function longestCommonSubsequence(a, b) {
   const solution = initMatrix(aLength + 1, bLength + 1);
 
   const usedDriftRange = Math.abs(
-    Math.max(Math.max(aLength, bLength) / 10, DRIFT_RANGE),
+    Math.max(Math.max(aLength, bLength) / 10, MIN_DRIFT_RANGE),
   );
 
   // Loop and find the solution
