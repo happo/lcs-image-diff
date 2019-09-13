@@ -34,3 +34,9 @@ it('produces a trace svg', () => {
   const img = subject();
   expect(img.trace.toSVG()).toMatch(/<svg.*viewBox="0 0 100 100".*<\/svg>/);
 });
+
+it('has meta-data', () => {
+  const img = subject();
+  expect(img.diff).toEqual(0.1991598705880487);
+  expect(img.maxDiff).toEqual(1);
+});

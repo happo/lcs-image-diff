@@ -9,11 +9,11 @@ function imageDiff(image1, image2, { hashFunction } = {}) {
     hashFunction,
   });
 
-  const { data, width, height, diff, trace } = createDiffImage({
+  const { data, width, height, diff, trace, maxDiff } = createDiffImage({
     image1Data,
     image2Data,
   });
-  return { data, width, height, diff, trace };
+  return { data, width, height, diff, trace, maxDiff };
 }
 
 imageDiff.DIFF_TRACE_PADDING = DIFF_TRACE_PADDING;
