@@ -15,6 +15,7 @@ module.exports = function createDiffImage({ image1Data, image2Data }) {
   const data = new Uint8ClampedArray(width * height);
   const trace = new DiffTrace({ width, height });
   let totalDiff = 0;
+  let maxDiff = 0;
 
   for (let row = 0; row < height; row += 1) {
     // Render image
@@ -35,6 +36,9 @@ module.exports = function createDiffImage({ image1Data, image2Data }) {
       );
 
       totalDiff += diff;
+      if (diff > maxDiff) {
+        maxDiff = diff;
+      }
 
       /* eslint-disable prefer-destructuring */
       if (diff > 0) {
@@ -58,7 +62,8 @@ module.exports = function createDiffImage({ image1Data, image2Data }) {
   }
 
   return {
-    diff: totalDiff / (width + height),
+    diff: totalDiff / (width * height),
+    maxDiff,
     trace,
     data,
     width: width / 4,

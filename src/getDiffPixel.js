@@ -1,6 +1,5 @@
 const compose = require('./compose');
 const euclideanDistance = require('./euclideanDistance');
-const { MAX_EUCLIDEAN_DISTANCE } = require('./euclideanDistance');
 
 const TRANSPARENT = [0, 0, 0, 0];
 
@@ -15,7 +14,7 @@ module.exports = function getDiffPixel(previousPixel, currentPixel) {
   // Delta E in Lab colorspace, we probably don't need perceptual accuracy for
   // this application, and it is nice to avoid the overhead of converting RGBA
   // to Lab.
-  const diff = euclideanDistance(previousPixel, currentPixel) / MAX_EUCLIDEAN_DISTANCE;
+  const diff = euclideanDistance(previousPixel, currentPixel);
   if (diff === 0) {
     if (currentPixel[3] === 0) {
       return {
