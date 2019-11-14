@@ -1,7 +1,7 @@
 {
   "name": "lcs-image-diff",
   "version": "1.1.0",
-  "description": "A javascript library to diff two images. Uses the Longest-Common-Subsequence algorithm to allow content to shift. ",
+  "description": "A JavaScript library to diff two images. Uses the Longest-Common-Subsequence algorithm to allow content to shift.",
   "main": "src/index.js",
   "files": [
     "src"
