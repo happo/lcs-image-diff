@@ -30,6 +30,7 @@ describe('snapshot tests', () => {
         Jimp.read(path.resolve('snapshots', snapshot, 'after.png')),
       ]);
       console.log('Images ready', snapshot);
+
       const diffImage = imageDiff(image1.bitmap, image2.bitmap, {
         hashFunction,
       });
@@ -37,6 +38,10 @@ describe('snapshot tests', () => {
       console.log('Created diff image', snapshot);
       const pathToDiff = path.resolve('snapshots', snapshot, 'diff.png');
 
+      // To update diff images when making changes, delete the existing diff.png
+      // files and run this test again.
+      //
+      // find snapshots -name diff.png | xargs rm
       if (!fs.existsSync(pathToDiff)) {
         console.log(
           `No previous diff image for ${snapshot} found -- saving diff.png.`,
@@ -44,9 +49,11 @@ describe('snapshot tests', () => {
         const newDiffImage = await new Jimp(diffImage);
         await newDiffImage.write(pathToDiff);
       }
+
       const expectedDiffImage = (await Jimp.read(pathToDiff)).bitmap;
       const diffHash = hashFunction(diffImage.data);
       const expectedHash = hashFunction(expectedDiffImage.data);
+
       if (diffHash !== expectedHash) {
         console.log(
           `Diff image did not match existing diff image. Remove this image and run again to re-generate:\n${pathToDiff}`,

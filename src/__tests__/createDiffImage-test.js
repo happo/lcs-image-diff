@@ -27,7 +27,7 @@ beforeEach(async () => {
 });
 
 it('has a total diff value and a max diff', async () => {
-  const { maxDiff, diff } = await subject();
-  expect(maxDiff).toEqual(0.027169424432452977);
-  expect(diff).toEqual(0.00043751263781383705);
+  const { diff, maxDiff } = await subject();
+  expect(diff).toEqual(0.000013924627638992437);
+  expect(maxDiff).toEqual(0.0009183359547574563);
 });
