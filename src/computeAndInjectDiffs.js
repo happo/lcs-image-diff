@@ -1,4 +1,5 @@
 const alignArrays = require('./alignArrays');
+const similarEnough = require('./similarEnough');
 
 function imageTo2DArray({ data, width, height }, paddingRight) {
   // The imageData is a 1D array. Each element in the array corresponds to a
@@ -14,20 +15,6 @@ function imageTo2DArray({ data, width, height }, paddingRight) {
     newData.push(pixelsInRow);
   }
   return newData;
-}
-
-function similarEnough({ hashedImage1Data, hashedImage2Data }) {
-  const { length } = hashedImage1Data;
-  if (length !== hashedImage2Data.length) {
-    return false;
-  }
-  let equalRows = 0;
-  for (let i = 0; i < length; i++) {
-    if (hashedImage1Data[i] === hashedImage2Data[i]) {
-      equalRows++;
-    }
-  }
-  return equalRows / length > 0.7;
 }
 
 function hashFn() {
@@ -59,12 +46,12 @@ function align({
   maxWidth,
   hashFunction,
 }) {
-  const hashedImage1Data = image1Data.map(hashFunction);
-  const hashedImage2Data = image2Data.map(hashFunction);
-
-  if (similarEnough({ hashedImage1Data, hashedImage2Data })) {
+  if (similarEnough({ image1Data, image2Data })) {
     return;
   }
+
+  const hashedImage1Data = image1Data.map(hashFunction);
+  const hashedImage2Data = image2Data.map(hashFunction);
 
   alignArrays(
     hashedImage1Data,
