@@ -1,3 +1,5 @@
+const CryptoJS = require('crypto-js');
+
 const MOVEMENT = {
   none: 0,
   upLeft: 1,
@@ -92,7 +94,7 @@ function applySolution(solution, a, b) {
   let changes = 0;
 
   let movement = solution[ai][bi];
-  while (movement !== MOVEMENT.none) {
+  while (movement) {
     if (movement === MOVEMENT.upLeft) {
       if (changes < 0) {
         b.splice(bi, 0, ...placeholders(Math.abs(changes)));
@@ -119,6 +121,48 @@ function applySolution(solution, a, b) {
   shorterArray.splice(0, 0, ...placeholders(Math.abs(aLength - bLength)));
 }
 
+function computeCacheKey(a, b) {
+  const md5 = CryptoJS.algo.MD5.create();
+  for (let i = 0; i < a.length; i++) {
+    md5.update(a[i]);
+  }
+  for (let j = 0; j < b.length; j++) {
+    md5.update(b[j]);
+  }
+  return `lcs-diff-${md5.finalize().toString()}`;
+}
+
+function getFromCache(key) {
+  if (!window) {
+    return;
+  }
+  const cached = window.localStorage.getItem(key);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+}
+
+function putInCache(key, solution) {
+  if (!window) {
+    return;
+  }
+  window.localStorage.setItem(
+    key,
+    JSON.stringify(solution, (_, val) => {
+      if (val instanceof Int32Array) {
+        const obj = {};
+        val.forEach((move, i) => {
+          if (move !== MOVEMENT.none) {
+            obj[i] = move;
+          }
+        });
+        return obj;
+      }
+      return val;
+    }),
+  );
+}
+
 /**
  * Computes the longest common subsequence of two arrays, then uses that
  * solution to inject gaps into the arrays, making them align on common
@@ -128,7 +172,12 @@ function applySolution(solution, a, b) {
  * @param {Array} b
  */
 function alignArrays(a, b) {
-  const lcsSolution = longestCommonSubsequence(a, b);
+  const cacheKey = computeCacheKey(a, b);
+  let lcsSolution = getFromCache(cacheKey);
+  if (!lcsSolution) {
+    lcsSolution = longestCommonSubsequence(a, b);
+    putInCache(cacheKey, lcsSolution);
+  }
   applySolution(lcsSolution, a, b);
 }
 
