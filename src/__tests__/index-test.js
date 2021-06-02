@@ -37,6 +37,6 @@ it('produces a trace svg', () => {
 
 it('has meta-data', () => {
   const { diff, maxDiff } = subject();
-  expect(diff).toEqual(0.049155430620799745);
-  expect(maxDiff).toEqual(0.7809273602519097);
+  expect(diff).toEqual(0.20505992912433182);
+  expect(maxDiff).toEqual(1);
 });
