@@ -12,10 +12,10 @@ let subject;
 
 beforeEach(async () => {
   image1 = (await Jimp.read(
-    'https://dummyimage.com/200/000/ffffff.png&text=aa',
+    'http://localhost:5411/aa-ffffff.png',
   )).bitmap;
   image2 = (await Jimp.read(
-    'https://dummyimage.com/200/000/f7f7f7.png&text=aa',
+    'http://localhost:5411/aa-f7f7f7.png',
   )).bitmap;
   subject = () =>
     createDiffImage(

@@ -12,12 +12,15 @@
   ],
   "license": "MIT",
   "scripts": {
+    "start-server": "http-server -p 5411 -c1 src/__tests__/test-images",
+    "test-ci": "yarn start-server & yarn test",
     "test": "jest"
   },
   "dependencies": {
     "imagetracerjs": "^1.2.5"
   },
   "devDependencies": {
+    "http-server": "^0.12.3",
     "jest": "^24.8.0",
     "jimp": "^0.8.5"
   }
