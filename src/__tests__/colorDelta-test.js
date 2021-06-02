@@ -22,8 +22,8 @@ it('is medium when comparing red and blue', () => {
   expect(delta).toBeLessThan(0.51);
 });
 
-it('is zero when comparing transparent and white', () => {
-  expect(colorDelta([0, 0, 0, 0], [255, 255, 255, 255])).toEqual(0);
+it('is one when comparing transparent and white', () => {
+  expect(colorDelta([0, 0, 0, 0], [255, 255, 255, 255])).toEqual(1);
 });
 
 it('is large when comparing transparent and black', () => {
