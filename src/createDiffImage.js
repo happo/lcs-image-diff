@@ -5,10 +5,11 @@ const GREEN = [106, 133, 0, 255];
 const MAGENTA = [197, 39, 114, 255];
 
 function getDataIndex(row, width, index) {
-  return (width * row) + index;
+  return width * row + index;
 }
 
 module.exports = function createDiffImage({ image1Data, image2Data }) {
+  // Images have the same width and height here
   const width = image1Data[0].length;
   const height = image1Data.length;
 

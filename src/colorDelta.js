@@ -30,6 +30,10 @@ module.exports = function colorDelta(previousPixel, currentPixel) {
     return 0;
   }
 
+  if ((a2 === 0 && a1 > 0) || (a1 === 0 && a2 > 0)) {
+    return 1;
+  }
+
   if (a1 < 255) {
     a1 /= 255;
     r1 = blend(r1, a1);
