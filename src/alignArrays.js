@@ -116,7 +116,15 @@ function applySolution(solution, a, b) {
   const aLength = a.length;
   const bLength = b.length;
   const shorterArray = aLength > bLength ? b : a;
-  shorterArray.splice(0, 0, ...placeholders(Math.abs(aLength - bLength)));
+  if (a[0] === b[0]) {
+    shorterArray.splice(
+      shorterArray.length - 1,
+      0,
+      ...placeholders(Math.abs(aLength - bLength)),
+    );
+  } else {
+    shorterArray.splice(0, 0, ...placeholders(Math.abs(aLength - bLength)));
+  }
 }
 
 /**
