@@ -18,7 +18,7 @@ function imageTo2DArray({ data, width, height }, paddingRight) {
   return newData;
 }
 
-function hashFn() {
+function resolveHashFn() {
   // Safari has a bug where trying to reference `btoa` inside a web worker will
   // result in an error, so we fall back to the slower (?) `JSON.stringify`. The
   // only way to prevent this seems to be by using a try/catch. We do this in its
@@ -39,7 +39,7 @@ function hashFn() {
   }
 }
 
-const HASH_FN = hashFn();
+const HASH_FN = resolveHashFn();
 
 function transparentLine(rawBgPixel, width) {
   const bgPixel = compose([200, 200, 200, 50], rawBgPixel);
