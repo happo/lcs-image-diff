@@ -13,7 +13,18 @@ function imageDiff(image1, image2, { hashFunction } = {}) {
     image1Data,
     image2Data,
   });
-  return { data, width, height, diff, trace, maxDiff };
+
+  const differentDimensions =
+    image1.width !== image2.width || image1.height !== image2.height;
+
+  return {
+    data,
+    width,
+    height,
+    diff,
+    trace,
+    maxDiff: differentDimensions ? 1 : maxDiff,
+  };
 }
 
 imageDiff.DIFF_TRACE_PADDING = DIFF_TRACE_PADDING;
