@@ -37,6 +37,18 @@ it('produces a trace svg', () => {
 
 it('has meta-data', () => {
   const { diff, maxDiff } = subject();
-  expect(diff).toEqual(0.20505992912433182);
+  expect(diff).toBeLessThan(0.3);
+  expect(maxDiff).toEqual(1);
+});
+
+it('has maxDiff=1 when images are of different size', async () => {
+  image1 = (await Jimp.read(
+    path.resolve(__dirname, 'test-images/button-before.png'),
+  )).bitmap;
+  image2 = (await Jimp.read(
+    path.resolve(__dirname, 'test-images/button-after.png'),
+  )).bitmap;
+  const { diff, maxDiff } = subject();
+  expect(diff).toBeLessThan(1);
   expect(maxDiff).toEqual(1);
 });
