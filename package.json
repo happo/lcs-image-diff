@@ -8,8 +8,12 @@
   ],
   "author": "Henric Trotzig <henric.trotzig@happo.io>",
   "contributors": [
-    "Joe Lencioni <joe.lencioni@airbnb.com> (https://github.com/lencioni)"
+    "Joe Lencioni <joe.lencioni@happo.io> (https://github.com/lencioni)"
   ],
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/happo/lcs-image-diff.git"
+  },
   "license": "MIT",
   "scripts": {
     "start-server": "http-server -p 5411 -c1 src/__tests__/test-images",
