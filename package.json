@@ -24,7 +24,7 @@
     "imagetracerjs": "^1.2.5"
   },
   "devDependencies": {
-    "http-server": "^0.12.3",
+    "http-server": "^14.1.1",
     "jest": "^29.7.0",
     "jimp": "^0.8.5"
   }
