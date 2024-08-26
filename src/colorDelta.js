@@ -17,6 +17,16 @@ function blend(color, alpha) {
   return 255 + (color - 255) * alpha;
 }
 
+function isIntentionalTransparent([r, g, b, a]) {
+  if (a !== 0) {
+    return false;
+  }
+  if (r === g && g === b && (r === 255 || r === 0)) {
+    return true;
+  }
+  return false;
+}
+
 // calculate color difference according to the paper "Measuring perceived color
 // difference using YIQ NTSC transmission color space in mobile applications" by
 // Y. Kotsarenko and F. Ramos
@@ -30,7 +40,10 @@ module.exports = function colorDelta(previousPixel, currentPixel) {
     return 0;
   }
 
-  if ((a2 === 0 && a1 > 0) || (a1 === 0 && a2 > 0)) {
+  if (
+    (isIntentionalTransparent(currentPixel) && a1 > 0) ||
+    (isIntentionalTransparent(previousPixel) && a2 > 0)
+  ) {
     return 1;
   }
 

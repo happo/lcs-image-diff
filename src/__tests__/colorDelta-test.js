@@ -33,3 +33,11 @@ it('is large when comparing transparent and black', () => {
 it('is large when comparing white and transparent', () => {
   expect(colorDelta([255, 255, 255, 255], [0, 0, 0, 0])).toBeGreaterThan(0.92);
 });
+
+it('is one when comparing intentionally transparent and some other color', () => {
+  expect(colorDelta([0, 0, 0, 0], [33, 33, 33, 10])).toEqual(1);
+});
+
+it('is small when comparing unintentional transparent and similar color', () => {
+  expect(colorDelta([ 1, 46, 250, 0 ], [ 1, 42, 250, 4 ])).toBeLessThan(0.05);
+});
