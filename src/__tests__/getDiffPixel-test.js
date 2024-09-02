@@ -22,16 +22,16 @@ it('returns magenta when diff', () => {
   });
 });
 
-it('returns diff when after alpha is zero', () => {
-  currentPixel[3] = 0;
+it('returns diff when after is filler pixel', () => {
+  currentPixel = [1, 1, 1, 1];
   expect(subject()).toEqual({
     diff: 1,
     pixel: [179, 54, 130, 255],
   });
 });
 
-it('returns diff when before alpha is zero', () => {
-  previousPixel[3] = 0;
+it('returns diff when before is filler pixel', () => {
+  previousPixel = [1, 1, 1, 1];
   expect(subject()).toEqual({
     diff: 1,
     pixel: [179, 54, 130, 255],
