@@ -17,6 +17,10 @@ function blend(color, alpha) {
   return 255 + (color - 255) * alpha;
 }
 
+function isFillerPixel([r, g, b, a]) {
+  return r === 1 && g === 1 && b === 1 && a === 1;
+}
+
 // calculate color difference according to the paper "Measuring perceived color
 // difference using YIQ NTSC transmission color space in mobile applications" by
 // Y. Kotsarenko and F. Ramos
@@ -30,7 +34,10 @@ module.exports = function colorDelta(previousPixel, currentPixel) {
     return 0;
   }
 
-  if ((a2 === 0 && a1 > 0) || (a1 === 0 && a2 > 0)) {
+  if (
+    (isFillerPixel(currentPixel) && a1 > 0) ||
+    (isFillerPixel(previousPixel) && a2 > 0)
+  ) {
     return 1;
   }
 

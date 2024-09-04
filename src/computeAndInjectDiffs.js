@@ -13,6 +13,10 @@ function imageTo2DArray({ data, width, height }, paddingRight) {
     for (let location = 0; location < rowSize; location += 1) {
       pixelsInRow[location] = data[row * rowSize + location];
     }
+    for (let location = rowSize; location < rowSize + (paddingRight * 4); location += 1) {
+      pixelsInRow[location] = 1;
+    }
+
     newData.push(pixelsInRow);
   }
   return newData;

@@ -22,14 +22,22 @@ it('is medium when comparing red and blue', () => {
   expect(delta).toBeLessThan(0.51);
 });
 
-it('is one when comparing transparent and white', () => {
-  expect(colorDelta([0, 0, 0, 0], [255, 255, 255, 255])).toEqual(1);
+it('is one when comparing filler pixel and white', () => {
+  expect(colorDelta([1, 1, 1, 1], [255, 255, 255, 255])).toEqual(1);
 });
 
 it('is large when comparing transparent and black', () => {
   expect(colorDelta([0, 0, 0, 0], [0, 0, 0, 255])).toBeGreaterThan(0.92);
 });
 
-it('is large when comparing white and transparent', () => {
-  expect(colorDelta([255, 255, 255, 255], [0, 0, 0, 0])).toBeGreaterThan(0.92);
+it('is large when comparing white and filler pixel', () => {
+  expect(colorDelta([255, 255, 255, 255], [1, 1, 1, 1])).toBeGreaterThan(0.92);
+});
+
+it('is one when comparing filler pixel and some other color', () => {
+  expect(colorDelta([1, 1, 1, 1], [33, 33, 33, 10])).toEqual(1);
+});
+
+it('is small when comparing transparent and similar color', () => {
+  expect(colorDelta([1, 46, 250, 0], [1, 42, 250, 4])).toBeLessThan(0.05);
 });
