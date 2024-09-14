@@ -27,8 +27,16 @@ function isFillerPixel([r, g, b, a]) {
 //
 // Modified from https://github.com/mapbox/pixelmatch
 module.exports = function colorDelta(previousPixel, currentPixel) {
-  let [r1, g1, b1, a1] = previousPixel;
-  let [r2, g2, b2, a2] = currentPixel;
+  // We are not using array destructuring because it is significantly slower,
+  // and we are sensitive to performance here.
+  let r1 = previousPixel[0];
+  let g1 = previousPixel[1];
+  let b1 = previousPixel[2];
+  let a1 = previousPixel[3];
+  let r2 = currentPixel[0];
+  let g2 = currentPixel[1];
+  let b2 = currentPixel[2];
+  let a2 = currentPixel[3];
 
   if (r1 === r2 && g1 === g2 && b1 === b2 && a1 === a2) {
     return 0;
