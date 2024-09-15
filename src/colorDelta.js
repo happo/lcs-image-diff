@@ -17,26 +17,27 @@ function blend(color, alpha) {
   return 255 + (color - 255) * alpha;
 }
 
-function isFillerPixel([r, g, b, a]) {
+function isFillerPixel(r, g, b, a) {
   return r === 1 && g === 1 && b === 1 && a === 1;
 }
 
-// calculate color difference according to the paper "Measuring perceived color
-// difference using YIQ NTSC transmission color space in mobile applications" by
-// Y. Kotsarenko and F. Ramos
-//
-// Modified from https://github.com/mapbox/pixelmatch
-module.exports = function colorDelta(previousPixel, currentPixel) {
-  let [r1, g1, b1, a1] = previousPixel;
-  let [r2, g2, b2, a2] = currentPixel;
-
+/**
+ * Calculate color difference between two pixels
+ *
+ * The difference is calculated according to the paper "Measuring perceived
+ * color difference using YIQ NTSC transmission color space in mobile
+ * applications" by Y. Kotsarenko and F. Ramos.
+ *
+ * Modified from https://github.com/mapbox/pixelmatch
+ */
+function colorDeltaChannels(r1, g1, b1, a1, r2, g2, b2, a2) {
   if (r1 === r2 && g1 === g2 && b1 === b2 && a1 === a2) {
     return 0;
   }
 
   if (
-    (isFillerPixel(currentPixel) && a1 > 0) ||
-    (isFillerPixel(previousPixel) && a2 > 0)
+    (isFillerPixel(r1, g1, b1, a1) && a1 > 0) ||
+    (isFillerPixel(r2, g2, b2, a2) && a2 > 0)
   ) {
     return 1;
   }
@@ -60,4 +61,31 @@ module.exports = function colorDelta(previousPixel, currentPixel) {
   const q = rgb2q(r1, g1, b1) - rgb2q(r2, g2, b2);
 
   return (0.5053 * y * y + 0.299 * i * i + 0.1957 * q * q) / MAX_YIQ_DIFFERENCE;
-};
+}
+
+/**
+ * Calculate color difference between two pixels
+ *
+ * The difference is calculated according to the paper "Measuring perceived
+ * color difference using YIQ NTSC transmission color space in mobile
+ * applications" by Y. Kotsarenko and F. Ramos.
+ *
+ * Modified from https://github.com/mapbox/pixelmatch
+ *
+ * @deprecated use `colorDeltaChannels` instead
+ */
+function colorDelta(previousPixel, currentPixel) {
+  return colorDeltaChannels(
+    previousPixel[0],
+    previousPixel[1],
+    previousPixel[2],
+    previousPixel[3],
+    currentPixel[0],
+    currentPixel[1],
+    currentPixel[2],
+    currentPixel[3]
+  );
+}
+
+module.exports = colorDelta;
+module.exports.colorDeltaChannels = colorDeltaChannels;
