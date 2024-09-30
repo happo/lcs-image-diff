@@ -22,18 +22,14 @@ module.exports = function createDiffImage({ image1Data, image2Data }) {
     // Render image
     for (let index = 0; index < width; index += 4) {
       const { diff, pixel } = getDiffPixel(
-        [
-          image1Data[row][index],
-          image1Data[row][index + 1],
-          image1Data[row][index + 2],
-          image1Data[row][index + 3],
-        ],
-        [
-          image2Data[row][index],
-          image2Data[row][index + 1],
-          image2Data[row][index + 2],
-          image2Data[row][index + 3],
-        ],
+        image1Data[row][index],
+        image1Data[row][index + 1],
+        image1Data[row][index + 2],
+        image1Data[row][index + 3],
+        image2Data[row][index],
+        image2Data[row][index + 1],
+        image2Data[row][index + 2],
+        image2Data[row][index + 3],
       );
 
       totalDiff += diff;
