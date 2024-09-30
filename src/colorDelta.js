@@ -56,11 +56,17 @@ function colorDeltaChannels(r1, g1, b1, a1, r2, g2, b2, a2) {
     b2 = blend(b2, a2);
   }
 
-  const y = rgb2y(r1, g1, b1) - rgb2y(r2, g2, b2);
+  const y1 = rgb2y(r1, g1, b1);
+  const y2 = rgb2y(r2, g2, b2);
+  const y = y1 - y2;
   const i = rgb2i(r1, g1, b1) - rgb2i(r2, g2, b2);
   const q = rgb2q(r1, g1, b1) - rgb2q(r2, g2, b2);
 
-  return (0.5053 * y * y + 0.299 * i * i + 0.1957 * q * q) / MAX_YIQ_DIFFERENCE;
+  const delta =
+    (0.5053 * y * y + 0.299 * i * i + 0.1957 * q * q) / MAX_YIQ_DIFFERENCE;
+
+  // encode whether the pixel lightens or darkens in the sign
+  return y1 > y2 ? -delta : delta;
 }
 
 /**
@@ -83,7 +89,7 @@ function colorDelta(previousPixel, currentPixel) {
     currentPixel[0],
     currentPixel[1],
     currentPixel[2],
-    currentPixel[3]
+    currentPixel[3],
   );
 }
 

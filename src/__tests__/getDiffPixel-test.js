@@ -7,7 +7,17 @@ let currentPixel;
 beforeEach(() => {
   previousPixel = [255, 255, 255, 255];
   currentPixel = [255, 255, 255, 255];
-  subject = () => getDiffPixel(previousPixel, currentPixel);
+  subject = () =>
+    getDiffPixel(
+      previousPixel[0],
+      previousPixel[1],
+      previousPixel[2],
+      previousPixel[3],
+      currentPixel[0],
+      currentPixel[1],
+      currentPixel[2],
+      currentPixel[3],
+    );
 });
 
 it('returns semi-opaque source if no diff', () => {
