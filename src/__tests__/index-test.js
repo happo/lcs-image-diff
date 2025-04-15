@@ -1,5 +1,5 @@
-const Jimp = require('jimp');
 const path = require('path');
+const sharp = require('sharp');
 
 const imageDiff = require('../');
 
@@ -10,12 +10,33 @@ let subject;
 
 beforeEach(async () => {
   hashFunction = undefined;
-  image1 = (await Jimp.read(
+  const image1Sharp = sharp(
     path.resolve(__dirname, '../../static/google-logo.png'),
-  )).bitmap;
-  image2 = (await Jimp.read(
+  );
+  const image2Sharp = sharp(
     path.resolve(__dirname, '../../static/github-logo.png'),
-  )).bitmap;
+  );
+
+  const [image1Metadata, image2Metadata] = await Promise.all([
+    image1Sharp.metadata(),
+    image2Sharp.metadata(),
+  ]);
+
+  const [image1Buffer, image2Buffer] = await Promise.all([
+    image1Sharp.raw().toBuffer(),
+    image2Sharp.raw().toBuffer(),
+  ]);
+
+  image1 = {
+    data: image1Buffer,
+    width: image1Metadata.width,
+    height: image1Metadata.height,
+  };
+  image2 = {
+    data: image2Buffer,
+    width: image2Metadata.width,
+    height: image2Metadata.height,
+  };
   subject = () => imageDiff(image1, image2, hashFunction);
 });
 
@@ -42,12 +63,33 @@ it('has meta-data', () => {
 });
 
 it('has maxDiff=1 when images are of different size', async () => {
-  image1 = (await Jimp.read(
+  const image1Sharp = sharp(
     path.resolve(__dirname, 'test-images/button-before.png'),
-  )).bitmap;
-  image2 = (await Jimp.read(
+  );
+  const image2Sharp = sharp(
     path.resolve(__dirname, 'test-images/button-after.png'),
-  )).bitmap;
+  );
+
+  const [image1Metadata, image2Metadata] = await Promise.all([
+    image1Sharp.metadata(),
+    image2Sharp.metadata(),
+  ]);
+
+  const [image1Buffer, image2Buffer] = await Promise.all([
+    image1Sharp.raw().toBuffer(),
+    image2Sharp.raw().toBuffer(),
+  ]);
+
+  image1 = {
+    data: image1Buffer,
+    width: image1Metadata.width,
+    height: image1Metadata.height,
+  };
+  image2 = {
+    data: image2Buffer,
+    width: image2Metadata.width,
+    height: image2Metadata.height,
+  };
   const { diff, maxDiff } = subject();
   expect(diff).toBeLessThan(1);
   expect(maxDiff).toEqual(1);
