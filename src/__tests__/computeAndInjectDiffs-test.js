@@ -1,15 +1,12 @@
-const Jimp = require('jimp');
-const crypto = require('crypto');
 const path = require('path');
+const crypto = require('crypto');
+const sharp = require('sharp');
 
 const computeAndInjectDiffs = require('../computeAndInjectDiffs');
 
 function createHash(data) {
-  return crypto
-    .createHash('md5')
-    .update(data)
-    .digest('hex');
-};
+  return crypto.createHash('md5').update(data).digest('hex');
+}
 
 let image1;
 let image2;
@@ -17,12 +14,33 @@ let hashFunction;
 let subject;
 
 beforeEach(async () => {
-  image1 = (await Jimp.read(
+  const image1Sharp = sharp(
     path.resolve(__dirname, '../../static/google-logo.png'),
-  )).bitmap;
-  image2 = (await Jimp.read(
+  );
+  const image2Sharp = sharp(
     path.resolve(__dirname, '../../static/github-logo.png'),
-  )).bitmap;
+  );
+
+  const [image1Metadata, image2Metadata] = await Promise.all([
+    image1Sharp.metadata(),
+    image2Sharp.metadata(),
+  ]);
+
+  const [image1Buffer, image2Buffer] = await Promise.all([
+    image1Sharp.raw().toBuffer(),
+    image2Sharp.raw().toBuffer(),
+  ]);
+
+  image1 = {
+    data: image1Buffer,
+    width: image1Metadata.width,
+    height: image1Metadata.height,
+  };
+  image2 = {
+    data: image2Buffer,
+    width: image2Metadata.width,
+    height: image2Metadata.height,
+  };
   hashFunction = undefined;
   subject = () =>
     computeAndInjectDiffs({

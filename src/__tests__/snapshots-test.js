@@ -3,15 +3,12 @@ const childProcess = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const Jimp = require('jimp');
+const sharp = require('sharp');
 
 const imageDiff = require('../');
 
 function hashFunction(data) {
-  return crypto
-    .createHash('md5')
-    .update(data)
-    .digest('hex');
+  return crypto.createHash('md5').update(data).digest('hex');
 }
 
 const snapshots = childProcess
@@ -24,16 +21,41 @@ jest.setTimeout(60000);
 describe('snapshot tests', () => {
   snapshots.forEach(snapshot => {
     it(snapshot, async () => {
-      console.log('Starting', snapshot);
-      const [image1, image2] = await Promise.all([
-        Jimp.read(path.resolve('snapshots', snapshot, 'before.png')),
-        Jimp.read(path.resolve('snapshots', snapshot, 'after.png')),
+      const pathToBefore = path.resolve('snapshots', snapshot, 'before.png');
+      const pathToAfter = path.resolve('snapshots', snapshot, 'after.png');
+
+      console.log('Starting', snapshot, pathToBefore, pathToAfter);
+
+      const image1Sharp = sharp(pathToBefore);
+      const image2Sharp = sharp(pathToAfter);
+
+      const [image1Metadata, image2Metadata] = await Promise.all([
+        image1Sharp.metadata(),
+        image2Sharp.metadata(),
       ]);
+
+      const [image1, image2] = await Promise.all([
+        image1Sharp.raw().toBuffer(),
+        image2Sharp.raw().toBuffer(),
+      ]);
+
       console.log('Images ready', snapshot);
 
-      const diffImage = imageDiff(image1.bitmap, image2.bitmap, {
-        hashFunction,
-      });
+      const diffImage = imageDiff(
+        {
+          data: image1,
+          width: image1Metadata.width,
+          height: image1Metadata.height,
+        },
+        {
+          data: image2,
+          width: image2Metadata.width,
+          height: image2Metadata.height,
+        },
+        {
+          hashFunction,
+        },
+      );
 
       console.log('Created diff image', snapshot);
       const pathToDiff = path.resolve('snapshots', snapshot, 'diff.png');
@@ -46,13 +68,18 @@ describe('snapshot tests', () => {
         console.log(
           `No previous diff image for ${snapshot} found -- saving diff.png.`,
         );
-        const newDiffImage = await new Jimp(diffImage);
-        await newDiffImage.write(pathToDiff);
+        await sharp(diffImage.data, {
+          raw: {
+            width: diffImage.width,
+            height: diffImage.height,
+            channels: 4,
+          },
+        }).toFile(pathToDiff);
       }
 
-      const expectedDiffImage = (await Jimp.read(pathToDiff)).bitmap;
+      const expectedDiffImage = await sharp(pathToDiff).raw().toBuffer();
       const diffHash = hashFunction(diffImage.data);
-      const expectedHash = hashFunction(expectedDiffImage.data);
+      const expectedHash = hashFunction(expectedDiffImage);
 
       if (diffHash !== expectedHash) {
         console.log(

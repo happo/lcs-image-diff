@@ -16,8 +16,6 @@
   },
   "license": "MIT",
   "scripts": {
-    "start-server": "http-server -p 5411 -c1 src/__tests__/test-images",
-    "test-ci": "yarn start-server & yarn test",
     "test": "jest"
   },
   "prettier": {
@@ -32,8 +30,7 @@
     "imagetracerjs": "^1.2.5"
   },
   "devDependencies": {
-    "http-server": "^14.1.1",
     "jest": "^29.7.0",
-    "jimp": "^0.8.5"
+    "sharp": "^0.34.1"
   }
 }
