@@ -9,5 +9,10 @@ jobs:
       - checkout:
           method: blobless
 
-      - run: yarn install
-      - run: yarn test
+      - run:
+          name: Install pnpm package manager
+          command: sudo npm install -g pnpm@10
+      - run:
+          name: Install Dependencies
+          command: pnpm install
+      - run: pnpm test
