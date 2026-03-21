@@ -26,8 +26,10 @@ describe('snapshot tests', () => {
 
       console.log('Starting', snapshot, pathToBefore, pathToAfter);
 
-      const image1Sharp = sharp(pathToBefore);
-      const image2Sharp = sharp(pathToAfter);
+      // ensureAlpha() normalises RGB images to RGBA so imageDiff always
+      // receives 4 bytes per pixel regardless of source format.
+      const image1Sharp = sharp(pathToBefore).ensureAlpha();
+      const image2Sharp = sharp(pathToAfter).ensureAlpha();
 
       const [image1Metadata, image2Metadata] = await Promise.all([
         image1Sharp.metadata(),
