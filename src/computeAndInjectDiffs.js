@@ -116,60 +116,40 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
     return;
   }
 
-  // Build one hash per BAND_SIZE-row band. Comparing bands instead of
-  // individual rows makes LCS ~BAND_SIZE× faster and absorbs small shifts.
-  function buildBandHashes(imageData) {
-    const hashes = [];
-    for (let i = 0; i < imageData.length; i += BAND_SIZE) {
-      hashes.push(
-        createScaledBandHash(imageData.slice(i, i + BAND_SIZE), hashFunction),
-      );
-    }
-    return hashes;
+  // Build one hash per row using a rolling BAND_SIZE-row window. Each hash
+  // averages the current row with the next BAND_SIZE-1 rows, which smooths
+  // over small vertical shifts and anti-aliasing differences while keeping
+  // single-row alignment precision. (The non-overlapping band approach
+  // introduced fragmented gaps when the shift wasn't a multiple of BAND_SIZE.)
+  function buildRowHashes(imageData) {
+    return imageData.map((_, i) =>
+      createScaledBandHash(
+        imageData.slice(i, Math.min(i + BAND_SIZE, imageData.length)),
+        hashFunction,
+      ),
+    );
   }
 
-  const band1Hashes = buildBandHashes(image1Data);
-  const band2Hashes = buildBandHashes(image2Data);
+  const hashes1 = buildRowHashes(image1Data);
+  const hashes2 = buildRowHashes(image2Data);
 
-  alignArrays(band1Hashes, band2Hashes);
+  alignArrays(hashes1, hashes2);
 
-  // Reconstruct the pixel-row array from the band-level alignment result.
-  // Each non-placeholder band maps back to BAND_SIZE original rows; each
-  // placeholder band becomes BAND_SIZE transparent filler rows.
-  function buildAligned(imageData, bandHashes, bg) {
-    const result = [];
-    let origBandIdx = 0;
-    for (let bi = 0; bi < bandHashes.length; bi++) {
-      if (bandHashes[bi] === alignArrays.PLACEHOLDER) {
-        for (let k = 0; k < BAND_SIZE; k++) {
-          result.push(transparentLine(bg, maxWidth));
-        }
-      } else {
-        const startRow = origBandIdx * BAND_SIZE;
-        for (let k = 0; k < BAND_SIZE; k++) {
-          const rowIdx = startRow + k;
-          result.push(
-            rowIdx < imageData.length
-              ? imageData[rowIdx]
-              : transparentLine(bg, maxWidth),
-          );
-        }
-        origBandIdx++;
-      }
-    }
-    return result;
-  }
-
+  // Inject a single transparent filler row wherever the LCS placed a
+  // placeholder — identical to the original approach.
   const image1Bg = image1Data[0].slice(0, 4);
+  hashes1.forEach((hash, i) => {
+    if (hash === alignArrays.PLACEHOLDER) {
+      image1Data.splice(i, 0, transparentLine(image1Bg, maxWidth));
+    }
+  });
+
   const image2Bg = image2Data[0].slice(0, 4);
-
-  const newImage1 = buildAligned(image1Data, band1Hashes, image1Bg);
-  const newImage2 = buildAligned(image2Data, band2Hashes, image2Bg);
-
-  image1Data.length = 0;
-  for (let i = 0; i < newImage1.length; i++) image1Data.push(newImage1[i]);
-  image2Data.length = 0;
-  for (let i = 0; i < newImage2.length; i++) image2Data.push(newImage2[i]);
+  hashes2.forEach((hash, i) => {
+    if (hash === alignArrays.PLACEHOLDER) {
+      image2Data.splice(i, 0, transparentLine(image2Bg, maxWidth));
+    }
+  });
 }
 
 /**
