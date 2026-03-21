@@ -2,6 +2,16 @@ const alignArrays = require('./alignArrays');
 const compose = require('./compose');
 const similarEnough = require('./similarEnough');
 
+// Number of pixel rows grouped into a single alignment band. Larger values
+// make the LCS faster and absorb small vertical shifts, at the cost of
+// inserting filler in coarser increments.
+const BAND_SIZE = 4;
+
+// Horizontal subsampling factor when computing band hashes. Every H_SCALE
+// pixels are averaged into one, shrinking the hash and smoothing over minor
+// horizontal variations (anti-aliasing, sub-pixel shifts).
+const H_SCALE = 8;
+
 function imageTo2DArray({ data, width, height }, paddingRight) {
   // The imageData is a 1D array. Each element in the array corresponds to a
   // decimal value that represents one of the RGBA channels for that pixel.
@@ -57,29 +67,109 @@ function transparentLine(rawBgPixel, width) {
   return result;
 }
 
+/**
+ * Produce a single hash representing a band of pixel rows. The band is
+ * compressed in two dimensions before hashing:
+ *
+ *  - Vertically: all rows in the band are averaged channel-by-channel so that
+ *    small vertical shifts (up to ~BAND_SIZE/2 rows) produce identical hashes.
+ *  - Horizontally: neighbouring pixels are averaged in groups of H_SCALE so
+ *    that minor horizontal shifts and anti-aliasing differences are absorbed
+ *    and the resulting byte array fed to hashFunction is much smaller.
+ *
+ * @param {Uint8ClampedArray[]} rows  One or more rows from imageTo2DArray.
+ * @param {Function} hashFn  The hash function to apply to the compressed row.
+ * @return {string}
+ */
+function createScaledBandHash(rows, hashFn) {
+  const byteWidth = rows[0].length;
+  const pixelWidth = byteWidth >> 2; // divide by 4 (RGBA)
+  const scaledWidth = Math.max(1, Math.ceil(pixelWidth / H_SCALE));
+
+  const result = new Uint8ClampedArray(scaledWidth << 2); // * 4
+
+  for (let px = 0; px < scaledWidth; px++) {
+    let r = 0, g = 0, b = 0, a = 0, count = 0;
+    const srcPxEnd = Math.min(pixelWidth, (px + 1) * H_SCALE);
+    for (let srcPx = px * H_SCALE; srcPx < srcPxEnd; srcPx++) {
+      const byteIdx = srcPx << 2;
+      for (let ri = 0; ri < rows.length; ri++) {
+        r += rows[ri][byteIdx];
+        g += rows[ri][byteIdx + 1];
+        b += rows[ri][byteIdx + 2];
+        a += rows[ri][byteIdx + 3];
+        count++;
+      }
+    }
+    const base = px << 2;
+    result[base]     = (r / count + 0.5) | 0;
+    result[base + 1] = (g / count + 0.5) | 0;
+    result[base + 2] = (b / count + 0.5) | 0;
+    result[base + 3] = (a / count + 0.5) | 0;
+  }
+
+  return hashFn(result);
+}
+
 function align({ image1Data, image2Data, maxWidth, hashFunction }) {
   if (similarEnough({ image1Data, image2Data })) {
     return;
   }
 
-  const hashedImage1Data = image1Data.map(hashFunction);
-  const hashedImage2Data = image2Data.map(hashFunction);
+  // Build one hash per BAND_SIZE-row band. Comparing bands instead of
+  // individual rows makes LCS ~BAND_SIZE× faster and absorbs small shifts.
+  function buildBandHashes(imageData) {
+    const hashes = [];
+    for (let i = 0; i < imageData.length; i += BAND_SIZE) {
+      hashes.push(
+        createScaledBandHash(imageData.slice(i, i + BAND_SIZE), hashFunction),
+      );
+    }
+    return hashes;
+  }
 
-  alignArrays(hashedImage1Data, hashedImage2Data);
+  const band1Hashes = buildBandHashes(image1Data);
+  const band2Hashes = buildBandHashes(image2Data);
+
+  alignArrays(band1Hashes, band2Hashes);
+
+  // Reconstruct the pixel-row array from the band-level alignment result.
+  // Each non-placeholder band maps back to BAND_SIZE original rows; each
+  // placeholder band becomes BAND_SIZE transparent filler rows.
+  function buildAligned(imageData, bandHashes, bg) {
+    const result = [];
+    let origBandIdx = 0;
+    for (let bi = 0; bi < bandHashes.length; bi++) {
+      if (bandHashes[bi] === alignArrays.PLACEHOLDER) {
+        for (let k = 0; k < BAND_SIZE; k++) {
+          result.push(transparentLine(bg, maxWidth));
+        }
+      } else {
+        const startRow = origBandIdx * BAND_SIZE;
+        for (let k = 0; k < BAND_SIZE; k++) {
+          const rowIdx = startRow + k;
+          result.push(
+            rowIdx < imageData.length
+              ? imageData[rowIdx]
+              : transparentLine(bg, maxWidth),
+          );
+        }
+        origBandIdx++;
+      }
+    }
+    return result;
+  }
 
   const image1Bg = image1Data[0].slice(0, 4);
-  hashedImage1Data.forEach((hashedLine, i) => {
-    if (hashedLine === alignArrays.PLACEHOLDER) {
-      image1Data.splice(i, 0, transparentLine(image1Bg, maxWidth));
-    }
-  });
-
   const image2Bg = image2Data[0].slice(0, 4);
-  hashedImage2Data.forEach((hashedLine, i) => {
-    if (hashedLine === alignArrays.PLACEHOLDER) {
-      image2Data.splice(i, 0, transparentLine(image2Bg, maxWidth));
-    }
-  });
+
+  const newImage1 = buildAligned(image1Data, band1Hashes, image1Bg);
+  const newImage2 = buildAligned(image2Data, band2Hashes, image2Bg);
+
+  image1Data.length = 0;
+  for (let i = 0; i < newImage1.length; i++) image1Data.push(newImage1[i]);
+  image2Data.length = 0;
+  for (let i = 0; i < newImage2.length; i++) image2Data.push(newImage2[i]);
 }
 
 /**
