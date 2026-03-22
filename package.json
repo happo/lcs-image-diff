@@ -16,7 +16,8 @@
   },
   "license": "MIT",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "serve": "node server.js"
   },
   "prettier": {
     "trailingComma": "all",
