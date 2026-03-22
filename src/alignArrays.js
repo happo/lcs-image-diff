@@ -1,5 +1,4 @@
 const PLACEHOLDER = '+';
-const MIN_DRIFT_RANGE = 200;
 
 // Movement direction constants stored in the solution band
 const NONE = 0;
@@ -42,8 +41,7 @@ function alignArrays(a, b) {
   const aLength = a.length;
   const bLength = b.length;
 
-  const usedDriftRange =
-    Math.max(Math.max(aLength, bLength) / 10, MIN_DRIFT_RANGE) | 0;
+  const usedDriftRange = Math.max(aLength, bLength);
   const halfDrift = (usedDriftRange + 1) >> 1;
   // +4: 1 left-padding column (EXTRA=1) + 1 right-padding + 2 safety margin
   const bandWidth = usedDriftRange + 4;
