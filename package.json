@@ -17,7 +17,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "serve": "node server.js"
   },
   "prettier": {
