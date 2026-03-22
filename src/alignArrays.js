@@ -38,8 +38,21 @@ function longestCommonSubsequence(a, b) {
   const memo = initMatrix(aLength + 1, bLength + 1);
   const solution = initMatrix(aLength + 1, bLength + 1);
 
-  const usedDriftRange = Math.abs(
-    Math.max(Math.max(aLength, bLength) / 10, MIN_DRIFT_RANGE),
+  // The drift range caps how far apart two row indices can be and still be
+  // considered a potential match (the search window is ±driftRange/2).
+  //
+  // For same-height images the original heuristic (maxLength/10, floored at
+  // MIN_DRIFT_RANGE) is sufficient. But when the two images differ in height,
+  // matching content can shift by more than the net height delta: if rows were
+  // both added above and deleted elsewhere, the positional offset of surviving
+  // rows can exceed |aLength - bLength|. Multiplying the height difference by 2
+  // and adding MIN_DRIFT_RANGE gives a window that covers that extra slack while
+  // still scaling proportionally to the actual difference. For identical-height
+  // images this term collapses to MIN_DRIFT_RANGE, preserving the old behaviour.
+  const usedDriftRange = Math.max(
+    2 * Math.abs(aLength - bLength) + MIN_DRIFT_RANGE,
+    Math.max(aLength, bLength) / 10,
+    MIN_DRIFT_RANGE,
   );
 
   // Loop and find the solution
