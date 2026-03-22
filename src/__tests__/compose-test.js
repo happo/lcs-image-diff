@@ -1,4 +1,4 @@
-const compose = require('../compose');
+import compose from '../compose.js';
 
 let subject;
 let foreground;

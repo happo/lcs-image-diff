@@ -1,5 +1,4 @@
-const colorDelta = require('../colorDelta');
-const { colorDeltaChannels } = require('../colorDelta');
+import colorDelta, { colorDeltaChannels } from '../colorDelta.js';
 
 describe('colorDelta', () => {
   it('produces the same results as colorDeltaChannels', () => {

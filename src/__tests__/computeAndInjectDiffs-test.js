@@ -1,8 +1,13 @@
-const path = require('path');
-const crypto = require('crypto');
-const sharp = require('sharp');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from 'path';
+import crypto from 'crypto';
+import sharp from 'sharp';
 
-const computeAndInjectDiffs = require('../computeAndInjectDiffs');
+import computeAndInjectDiffs from '../computeAndInjectDiffs.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 function createHash(data) {
   return crypto.createHash('md5').update(data).digest('hex');

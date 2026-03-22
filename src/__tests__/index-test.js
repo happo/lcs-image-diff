@@ -1,7 +1,12 @@
-const path = require('path');
-const sharp = require('sharp');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from 'path';
+import sharp from 'sharp';
 
-const imageDiff = require('../');
+import imageDiff from '../index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let image1;
 let image2;

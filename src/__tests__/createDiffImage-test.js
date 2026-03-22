@@ -1,8 +1,13 @@
-const path = require('path');
-const sharp = require('sharp');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from 'path';
+import sharp from 'sharp';
 
-const computeAndInjectDiffs = require('../computeAndInjectDiffs');
-const createDiffImage = require('../createDiffImage');
+import computeAndInjectDiffs from '../computeAndInjectDiffs.js';
+import createDiffImage from '../createDiffImage.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let image1;
 let image2;

@@ -30,7 +30,7 @@ function isFillerPixel(r, g, b, a) {
  *
  * Modified from https://github.com/mapbox/pixelmatch
  */
-function colorDeltaChannels(r1, g1, b1, a1, r2, g2, b2, a2) {
+export function colorDeltaChannels(r1, g1, b1, a1, r2, g2, b2, a2) {
   if (r1 === r2 && g1 === g2 && b1 === b2 && a1 === a2) {
     return 0;
   }
@@ -93,5 +93,4 @@ function colorDelta(previousPixel, currentPixel) {
   );
 }
 
-module.exports = colorDelta;
-module.exports.colorDeltaChannels = colorDeltaChannels;
+export default colorDelta;

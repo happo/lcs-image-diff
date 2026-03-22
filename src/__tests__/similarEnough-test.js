@@ -1,4 +1,4 @@
-const similarEnough = require('../similarEnough');
+import similarEnough from '../similarEnough.js';
 
 let subject;
 let image1Data;

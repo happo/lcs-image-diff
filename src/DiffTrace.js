@@ -1,6 +1,8 @@
-const { imagedataToSVG } = require('imagetracerjs');
+import imagetracer from 'imagetracerjs';
 
-const { DIFF_TRACE_PADDING } = require('./constants');
+import { DIFF_TRACE_PADDING } from './constants.js';
+
+const { imagedataToSVG } = imagetracer;
 
 const BLEED = 1;
 
@@ -8,7 +10,7 @@ function getDataIndex(row, width, index) {
   return (width * row) + index;
 }
 
-module.exports = class DiffTrace {
+export default class DiffTrace {
   constructor({ width, height }) {
     this.width = width + (DIFF_TRACE_PADDING * 2 * 4);
     this.height = height + (DIFF_TRACE_PADDING * 2);
@@ -55,4 +57,4 @@ module.exports = class DiffTrace {
       strokewidth: 1.5,
     });
   }
-};
+}

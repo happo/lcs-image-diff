@@ -1,9 +1,9 @@
-const compose = require("./compose");
-const { colorDeltaChannels } = require("./colorDelta");
+import compose from './compose.js';
+import { colorDeltaChannels } from './colorDelta.js';
 
 const TRANSPARENT = [0, 0, 0, 0];
 
-module.exports = function getDiffPixel(r1, g1, b1, a1, r2, g2, b2, a2) {
+export default function getDiffPixel(r1, g1, b1, a1, r2, g2, b2, a2) {
   // Compute a score that represents the difference between 2 pixels
   const diff = Math.abs(colorDeltaChannels(r1, g1, b1, a1, r2, g2, b2, a2));
   if (diff === 0) {
@@ -23,4 +23,4 @@ module.exports = function getDiffPixel(r1, g1, b1, a1, r2, g2, b2, a2) {
     diff,
     pixel: compose([179, 54, 130, 255 * Math.max(0.2, diff)], TRANSPARENT),
   };
-};
+}

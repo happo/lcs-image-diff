@@ -1,4 +1,4 @@
-const alignArrays = require( '../alignArrays');
+import alignArrays from '../alignArrays.js';
 
 function test(aStr, bStr, expectedAStr, expectedBStr) {
   const a = aStr.split('');
