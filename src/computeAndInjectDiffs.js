@@ -57,6 +57,36 @@ function transparentLine(rawBgPixel, width) {
   return result;
 }
 
+// Maximum number of times a row may appear in each image and still be used
+// as an LCS anchor. Rows appearing more than this many times are treated as
+// non-unique and never matched across images. Keeping this small (but > 1)
+// lets repeated-but-not-ubiquitous rows (e.g. identical list items) serve as
+// alignment anchors, while excluding truly ubiquitous rows (e.g. hundreds of
+// identical white rows in a blank image) that would cause spurious matches.
+const MAX_ROW_OCCURRENCES = 20;
+
+function toUniqueHashes(hashes1, hashes2) {
+  const counts1 = new Map();
+  const counts2 = new Map();
+  for (const h of hashes1) counts1.set(h, (counts1.get(h) || 0) + 1);
+  for (const h of hashes2) counts2.set(h, (counts2.get(h) || 0) + 1);
+  const unique1 = hashes1.map((h, i) => {
+    const c1 = counts1.get(h);
+    const c2 = counts2.get(h);
+    return c1 <= MAX_ROW_OCCURRENCES && c2 && c2 <= MAX_ROW_OCCURRENCES
+      ? h
+      : `\0a${i}`;
+  });
+  const unique2 = hashes2.map((h, i) => {
+    const c1 = counts1.get(h);
+    const c2 = counts2.get(h);
+    return c2 <= MAX_ROW_OCCURRENCES && c1 && c1 <= MAX_ROW_OCCURRENCES
+      ? h
+      : `\0b${i}`;
+  });
+  return [unique1, unique2];
+}
+
 function align({ image1Data, image2Data, maxWidth, hashFunction }) {
   if (similarEnough({ image1Data, image2Data })) {
     return;
@@ -65,17 +95,18 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
   const hashedImage1Data = image1Data.map(hashFunction);
   const hashedImage2Data = image2Data.map(hashFunction);
 
-  alignArrays(hashedImage1Data, hashedImage2Data);
+  const [unique1, unique2] = toUniqueHashes(hashedImage1Data, hashedImage2Data);
+  alignArrays(unique1, unique2);
 
   const image1Bg = image1Data[0].slice(0, 4);
-  hashedImage1Data.forEach((hashedLine, i) => {
+  unique1.forEach((hashedLine, i) => {
     if (hashedLine === alignArrays.PLACEHOLDER) {
       image1Data.splice(i, 0, transparentLine(image1Bg, maxWidth));
     }
   });
 
   const image2Bg = image2Data[0].slice(0, 4);
-  hashedImage2Data.forEach((hashedLine, i) => {
+  unique2.forEach((hashedLine, i) => {
     if (hashedLine === alignArrays.PLACEHOLDER) {
       image2Data.splice(i, 0, transparentLine(image2Bg, maxWidth));
     }
