@@ -4,7 +4,7 @@
   "description": "A JavaScript library to diff two images. Uses the Longest-Common-Subsequence algorithm to allow content to shift.",
   "main": "src/index.js",
   "files": [
-    "src"
+    "src/*.js"
   ],
   "author": "Henric Trotzig <henric.trotzig@happo.io>",
   "contributors": [
