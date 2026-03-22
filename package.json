@@ -2,13 +2,14 @@
   "name": "lcs-image-diff",
   "version": "3.0.0",
   "description": "A JavaScript library to diff two images. Uses the Longest-Common-Subsequence algorithm to allow content to shift.",
+  "type": "module",
   "main": "src/index.js",
   "files": [
     "src/*.js"
   ],
-  "author": "Henric Trotzig <henric.trotzig@happo.io>",
-  "contributors": [
-    "Joe Lencioni <joe.lencioni@happo.io> (https://github.com/lencioni)"
+  "authors": [
+    "Henric Persson <henric@happo.io>",
+    "Joe Lencioni <joe@happo.io>"
   ],
   "repository": {
     "type": "git",
@@ -16,7 +17,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "serve": "node server.js"
   },
   "prettier": {

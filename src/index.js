@@ -1,6 +1,6 @@
-const { DIFF_TRACE_PADDING } = require('./constants');
-const computeAndInjectDiffs = require('./computeAndInjectDiffs');
-const createDiffImage = require('./createDiffImage');
+import { DIFF_TRACE_PADDING } from './constants.js';
+import computeAndInjectDiffs from './computeAndInjectDiffs.js';
+import createDiffImage from './createDiffImage.js';
 
 function imageDiff(image1, image2, { hashFunction } = {}) {
   const { image1Data, image2Data } = computeAndInjectDiffs({
@@ -29,4 +29,4 @@ function imageDiff(image1, image2, { hashFunction } = {}) {
 
 imageDiff.DIFF_TRACE_PADDING = DIFF_TRACE_PADDING;
 
-module.exports = imageDiff;
+export default imageDiff;

@@ -1,12 +1,16 @@
 #!/usr/bin/env node
-'use strict';
 
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const PORT = process.env.PORT || 3456;
-const SNAPSHOTS_DIR = path.join(__dirname, 'snapshots');
+const SNAPSHOTS_DIR = join(__dirname, 'snapshots');
 
 const MIME_TYPES = {
   '.html': 'text/html',

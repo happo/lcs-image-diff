@@ -1,13 +1,17 @@
 #!/usr/bin/env node
-'use strict';
 
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
-const sharp = require('sharp');
+import sharp from 'sharp';
 
-const imageDiff = require('./src/index.js');
+import imageDiff from './src/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const RUNS_PER_SNAPSHOT = 3;
 

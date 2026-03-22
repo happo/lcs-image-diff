@@ -1,11 +1,12 @@
-const crypto = require('crypto');
-const childProcess = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { jest } from '@jest/globals';
+import crypto from 'crypto';
+import childProcess from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
-const sharp = require('sharp');
+import sharp from 'sharp';
 
-const imageDiff = require('../');
+import imageDiff from '../index.js';
 
 function hashFunction(data) {
   return crypto.createHash('md5').update(data).digest('hex');

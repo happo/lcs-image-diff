@@ -134,4 +134,4 @@ function alignArrays(a, b) {
 
 alignArrays.PLACEHOLDER = PLACEHOLDER;
 
-module.exports = alignArrays;
+export default alignArrays;

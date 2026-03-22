@@ -1,4 +1,4 @@
-const getDiffPixel = require('../getDiffPixel');
+import getDiffPixel from '../getDiffPixel.js';
 
 let subject;
 let previousPixel;

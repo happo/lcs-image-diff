@@ -1,6 +1,6 @@
-const alignArrays = require('./alignArrays');
-const compose = require('./compose');
-const similarEnough = require('./similarEnough');
+import alignArrays from './alignArrays.js';
+import compose from './compose.js';
+import similarEnough from './similarEnough.js';
 
 function imageTo2DArray({ data, width, height }, paddingRight) {
   // The imageData is a 1D array. Each element in the array corresponds to a
@@ -94,7 +94,7 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
  * @param {Array} image2
  * @return {Object}
  */
-module.exports = function computeAndInjectDiffs({
+export default function computeAndInjectDiffs({
   image1,
   image2,
   hashFunction = HASH_FN,
@@ -115,4 +115,4 @@ module.exports = function computeAndInjectDiffs({
     image1Data,
     image2Data,
   };
-};
+}

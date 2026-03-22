@@ -1,6 +1,6 @@
 const ALLOWED_INEQUALITY = 0.3;
 
-module.exports = function similarEnough({ image1Data, image2Data }) {
+export default function similarEnough({ image1Data, image2Data }) {
   const { length } = image1Data;
   if (length !== image2Data.length) {
     return false;
@@ -21,4 +21,3 @@ module.exports = function similarEnough({ image1Data, image2Data }) {
   }
   return true;
 }
-

@@ -24,7 +24,7 @@ function int8Mult(a, b) {
  *
  * This version is faster than a version based on floating point math.
  */
-module.exports = function compose(foreground, background) {
+export default function compose(foreground, background) {
   if (isOpaque(foreground) || isFullyTransparent(background)) {
     return foreground;
   }
@@ -40,4 +40,4 @@ module.exports = function compose(foreground, background) {
     int8Mult(foreground[3], foreground[2]) + int8Mult(aCom, background[2]),
     foreground[3] + aCom,
   ];
-};
+}
