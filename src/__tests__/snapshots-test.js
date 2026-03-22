@@ -35,8 +35,8 @@ describe('snapshot tests', () => {
       ]);
 
       const [image1, image2] = await Promise.all([
-        image1Sharp.raw().toBuffer(),
-        image2Sharp.raw().toBuffer(),
+        image1Sharp.ensureAlpha().raw().toBuffer(),
+        image2Sharp.ensureAlpha().raw().toBuffer(),
       ]);
 
       console.log('Images ready', snapshot);
