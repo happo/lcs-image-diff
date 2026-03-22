@@ -150,46 +150,6 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
       image2Data.splice(i, 0, transparentLine(image2Bg, maxWidth));
     }
   });
-
-  // After injection, image1Data[i] ↔ hashes1[i] and image2Data[i] ↔ hashes2[i].
-  // Scattered "thin stripe" diffs occur when isolated type-1 positions (before
-  // has a filler row, after has real content) sit close to isolated type-2
-  // positions (before has real content, after has a filler row).  Rather than
-  // rendering two separate single-pixel-tall diff stripes that are visually
-  // distracting and hard to interpret, cancel nearby opposite pairs: remove
-  // both the filler and its partner real row from each side so the region is
-  // simply omitted from the final comparison.
-  const P = alignArrays.PLACEHOLDER;
-  // How many rows apart two opposite-side fillers can be and still be paired.
-  const CONSOLIDATION_WINDOW = 50;
-  const toDelete = new Set();
-
-  for (let i = 0; i < hashes1.length; i++) {
-    if (toDelete.has(i)) continue;
-    const isType1 = hashes1[i] === P && hashes2[i] !== P;
-    const isType2 = hashes2[i] === P && hashes1[i] !== P;
-    if (!isType1 && !isType2) continue;
-
-    // Search forward for the nearest opposite-type position within the window.
-    for (let j = i + 1; j < Math.min(hashes1.length, i + CONSOLIDATION_WINDOW + 1); j++) {
-      if (toDelete.has(j)) continue;
-      const jIsType1 = hashes1[j] === P && hashes2[j] !== P;
-      const jIsType2 = hashes2[j] === P && hashes1[j] !== P;
-      if ((isType1 && jIsType2) || (isType2 && jIsType1)) {
-        toDelete.add(i);
-        toDelete.add(j);
-        break;
-      }
-    }
-  }
-
-  // Remove paired positions in reverse order so earlier indices stay valid.
-  Array.from(toDelete)
-    .sort((a, b) => b - a)
-    .forEach(idx => {
-      image1Data.splice(idx, 1);
-      image2Data.splice(idx, 1);
-    });
 }
 
 /**
