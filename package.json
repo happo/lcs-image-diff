@@ -16,6 +16,7 @@
     "url": "https://github.com/happo/lcs-image-diff.git"
   },
   "license": "MIT",
+  "packageManager": "pnpm",
   "scripts": {
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "serve": "node server.js"
