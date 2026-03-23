@@ -65,6 +65,162 @@ function transparentLine(rawBgPixel, width) {
 // identical white rows in a blank image) that would cause spurious matches.
 const MAX_ROW_OCCURRENCES = 20;
 
+// Match runs shorter than this are considered "small islands" and may be
+// absorbed into surrounding change blocks during the second pass.
+const MIN_LONG_MATCH = 3;
+
+// When both immediate change-segment neighbours of a match island are at most
+// this many rows, the island is very likely sitting in the middle of a
+// scattered-change region (e.g. "C1 M22 C1 M22 C1").  In that case we use a
+// much more aggressive absorption limit (SMALL_NEIGHBOR_MATCH) so that the
+// larger match blocks in between also get absorbed and the scattered single-
+// line placeholder groups collapse into one tidy change block.
+const SMALL_NEIGHBOR_SIZE = 2;
+const SMALL_NEIGHBOR_MATCH = 30;
+
+/**
+ * Second pass over the aligned arrays: absorbs small match islands (runs of
+ * fewer than MIN_LONG_MATCH matching rows that are flanked on both sides by
+ * change segments) into the surrounding change blocks, then compacts each
+ * combined change block so all image1 rows (deletions) come first and all
+ * image2 rows (additions) come last.  This eliminates scattered single-line
+ * or few-line placeholder rows that make the visual diff noisy.
+ */
+function compactChangeRegions(
+  unique1,
+  unique2,
+  image1Data,
+  image2Data,
+  image1Bg,
+  image2Bg,
+  maxWidth,
+) {
+  const n = unique1.length;
+  const PLACEHOLDER = alignArrays.PLACEHOLDER;
+
+  // Build alternating match/change segment list.
+  const segs = [];
+  let i = 0;
+  while (i < n) {
+    const isMatch =
+      unique1[i] !== PLACEHOLDER && unique2[i] !== PLACEHOLDER;
+    let j = i + 1;
+    while (
+      j < n &&
+      (unique1[j] !== PLACEHOLDER && unique2[j] !== PLACEHOLDER) === isMatch
+    ) {
+      j++;
+    }
+    segs.push({ isMatch, start: i, end: j });
+    i = j;
+  }
+
+  // Merge pass: absorb small flanked match islands into surrounding change
+  // segments, then coalesce adjacent change segments.
+  //
+  // The absorption threshold depends on the *original* sizes of the two
+  // neighbouring change segments (read directly from `segs`, which is never
+  // mutated, so we always see the original sizes even after cascading merges):
+  //   • If both neighbours are ≤ SMALL_NEIGHBOR_SIZE rows we use the more
+  //     aggressive SMALL_NEIGHBOR_MATCH limit so that patterns like
+  //     "C1 M22 C1 M22 C1" are compacted into a single change block.
+  //   • Otherwise we use the conservative MIN_LONG_MATCH limit.
+  const blocks = [];
+  for (let s = 0; s < segs.length; s++) {
+    const seg = segs[s];
+    const prev = blocks[blocks.length - 1];
+    if (!seg.isMatch && prev && !prev.isMatch) {
+      // Adjacent change segments — extend the previous one.
+      prev.end = seg.end;
+    } else if (
+      seg.isMatch &&
+      prev &&
+      !prev.isMatch &&
+      s + 1 < segs.length &&
+      !segs[s + 1].isMatch
+    ) {
+      // Match island flanked by change segments on both sides.
+      // Decide threshold based on original neighbour sizes.
+      const leftLen = segs[s - 1].end - segs[s - 1].start;
+      const rightLen = segs[s + 1].end - segs[s + 1].start;
+      const threshold =
+        leftLen <= SMALL_NEIGHBOR_SIZE && rightLen <= SMALL_NEIGHBOR_SIZE
+          ? SMALL_NEIGHBOR_MATCH
+          : MIN_LONG_MATCH;
+      if (seg.end - seg.start < threshold) {
+        prev.end = seg.end;
+      } else {
+        blocks.push({ isMatch: true, start: seg.start, end: seg.end });
+      }
+    } else {
+      blocks.push({ isMatch: seg.isMatch, start: seg.start, end: seg.end });
+    }
+  }
+
+  const img1Ph = transparentLine(image1Bg, maxWidth);
+  const img2Ph = transparentLine(image2Bg, maxWidth);
+
+  // Process change blocks from right to left so earlier indices stay valid
+  // after each splice.
+  for (let b = blocks.length - 1; b >= 0; b--) {
+    const block = blocks[b];
+    if (block.isMatch) continue;
+
+    const { start, end } = block;
+
+    // Only compact blocks that contain absorbed match islands (both sides
+    // non-placeholder at the same position).
+    let hasIsland = false;
+    for (let i = start; i < end; i++) {
+      if (unique1[i] !== PLACEHOLDER && unique2[i] !== PLACEHOLDER) {
+        hasIsland = true;
+        break;
+      }
+    }
+    if (!hasIsland) continue;
+
+    // Collect non-placeholder rows from each side.
+    const aU = [],
+      aImg = [],
+      bU = [],
+      bImg = [];
+    for (let i = start; i < end; i++) {
+      if (unique1[i] !== PLACEHOLDER) {
+        aU.push(unique1[i]);
+        aImg.push(image1Data[i]);
+      }
+      if (unique2[i] !== PLACEHOLDER) {
+        bU.push(unique2[i]);
+        bImg.push(image2Data[i]);
+      }
+    }
+
+    // Rebuild: image1 rows (DEL, with placeholder in image2) then image2
+    // rows (ADD, with placeholder in image1).
+    const newU1 = [],
+      newU2 = [],
+      newImg1 = [],
+      newImg2 = [];
+    for (let j = 0; j < aU.length; j++) {
+      newU1.push(aU[j]);
+      newU2.push(PLACEHOLDER);
+      newImg1.push(aImg[j]);
+      newImg2.push(img2Ph);
+    }
+    for (let j = 0; j < bU.length; j++) {
+      newU1.push(PLACEHOLDER);
+      newU2.push(bU[j]);
+      newImg1.push(img1Ph);
+      newImg2.push(bImg[j]);
+    }
+
+    unique1.splice(start, end - start, ...newU1);
+    unique2.splice(start, end - start, ...newU2);
+    image1Data.splice(start, end - start, ...newImg1);
+    image2Data.splice(start, end - start, ...newImg2);
+  }
+}
+
 function toUniqueHashes(hashes1, hashes2) {
   const counts1 = new Map();
   const counts2 = new Map();
@@ -111,6 +267,17 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
       image2Data.splice(i, 0, transparentLine(image2Bg, maxWidth));
     }
   });
+
+  // Second pass: compact scattered small match islands to reduce noise.
+  compactChangeRegions(
+    unique1,
+    unique2,
+    image1Data,
+    image2Data,
+    image1Bg,
+    image2Bg,
+    maxWidth,
+  );
 }
 
 /**
