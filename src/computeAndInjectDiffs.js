@@ -87,6 +87,157 @@ function toUniqueHashes(hashes1, hashes2) {
   return [unique1, unique2];
 }
 
+// How close (in rows) two gap blocks must be to be cancelled or combined.
+const SIMPLIFY_THRESHOLD = 40;
+
+/**
+ * Builds a segment list from the aligned hash arrays. Each segment describes a
+ * contiguous run of one type of operation:
+ *   'before'  – arr1 has placeholder, arr2 has content (image2 has extra rows)
+ *   'after'   – arr1 has content, arr2 has placeholder (image1 has extra rows)
+ *   'neutral' – both have placeholder (padding)
+ *   'match'   – both have content
+ *
+ * Row entries store the original imageData indices so rows can be freely
+ * reordered or dropped during simplification without losing track of which
+ * pixel data to use.
+ */
+function buildSegments(unique1, unique2) {
+  const PH = alignArrays.PLACEHOLDER;
+  const segments = [];
+  let i1 = 0;
+  let i2 = 0;
+
+  function typeOf(u1, u2) {
+    if (u1 === PH && u2 !== PH) return 'before';
+    if (u1 !== PH && u2 === PH) return 'after';
+    if (u1 === PH && u2 === PH) return 'neutral';
+    return 'match';
+  }
+
+  for (let i = 0; i < unique1.length; ) {
+    const type = typeOf(unique1[i], unique2[i]);
+    const rows = [];
+    while (i < unique1.length && typeOf(unique1[i], unique2[i]) === type) {
+      if (type === 'before') {
+        rows.push({ i2: i2++ });
+      } else if (type === 'after') {
+        rows.push({ i1: i1++ });
+      } else if (type === 'neutral') {
+        rows.push({});
+      } else {
+        rows.push({ i1: i1++, i2: i2++ });
+      }
+      i++;
+    }
+    segments.push({ type, rows });
+  }
+  return segments;
+}
+
+function isOppositeType(t1, t2) {
+  return (t1 === 'before' && t2 === 'after') || (t1 === 'after' && t2 === 'before');
+}
+
+/**
+ * Simplifies the segment list in place:
+ *   - Cancel: adjacent opposite-direction gap blocks cancel each other out.
+ *   - Cancel: opposite-direction gap blocks within `threshold` match rows also
+ *     cancel (min of the two counts is removed from each).
+ *   - Combine: same-direction gap blocks separated by ≤ threshold match rows
+ *     are merged into a single contiguous gap block (the match rows are kept
+ *     but shifted to come after the merged gap).
+ */
+function simplifySegments(segments, threshold) {
+  let changed = true;
+  while (changed) {
+    changed = false;
+
+    // Cancel adjacent opposite gaps
+    for (let s = 0; s < segments.length - 1; s++) {
+      const s1 = segments[s];
+      const s2 = segments[s + 1];
+      if (isOppositeType(s1.type, s2.type)) {
+        const n = Math.min(s1.rows.length, s2.rows.length);
+        if (n > 0) {
+          s1.rows.splice(s1.rows.length - n);
+          s2.rows.splice(0, n);
+          if (s2.rows.length === 0) segments.splice(s + 1, 1);
+          if (s1.rows.length === 0) segments.splice(s, 1);
+          changed = true;
+          break;
+        }
+      }
+    }
+    if (changed) continue;
+
+    // Combine or cancel gap blocks separated by a small match segment
+    for (let s = 0; s < segments.length - 2; s++) {
+      const s1 = segments[s];
+      const sm = segments[s + 1];
+      const s3 = segments[s + 2];
+
+      if (sm.type !== 'match' || sm.rows.length > threshold) continue;
+
+      // Combine: two same-direction gaps → merge them, keep match rows after
+      if (s1.type === s3.type && (s1.type === 'before' || s1.type === 'after')) {
+        segments.splice(s, 3,
+          { type: s1.type, rows: [...s1.rows, ...s3.rows] },
+          { type: 'match', rows: sm.rows },
+        );
+        changed = true;
+        break;
+      }
+
+      // Cancel: opposite-direction gaps close to each other
+      if (isOppositeType(s1.type, s3.type)) {
+        const n = Math.min(s1.rows.length, s3.rows.length);
+        if (n > 0) {
+          s1.rows.splice(s1.rows.length - n);
+          s3.rows.splice(0, n);
+          const newSegs = [];
+          if (s1.rows.length > 0) newSegs.push(s1);
+          newSegs.push(sm);
+          if (s3.rows.length > 0) newSegs.push(s3);
+          segments.splice(s, 3, ...newSegs);
+          changed = true;
+          break;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Reconstructs the final image arrays from a (possibly simplified) segment
+ * list. Transparent placeholder lines are inserted where needed, and any rows
+ * removed during simplification are simply omitted from the output.
+ */
+function reconstructImages(segments, image1Data, image2Data, image1Bg, image2Bg, maxWidth) {
+  const out1 = [];
+  const out2 = [];
+
+  for (const seg of segments) {
+    for (const row of seg.rows) {
+      if (seg.type === 'before') {
+        out1.push(transparentLine(image1Bg, maxWidth));
+        out2.push(image2Data[row.i2]);
+      } else if (seg.type === 'after') {
+        out1.push(image1Data[row.i1]);
+        out2.push(transparentLine(image2Bg, maxWidth));
+      } else if (seg.type === 'neutral') {
+        out1.push(transparentLine(image1Bg, maxWidth));
+        out2.push(transparentLine(image2Bg, maxWidth));
+      } else {
+        out1.push(image1Data[row.i1]);
+        out2.push(image2Data[row.i2]);
+      }
+    }
+  }
+
+  return { out1, out2 };
+}
+
 function align({ image1Data, image2Data, maxWidth, hashFunction }) {
   if (similarEnough({ image1Data, image2Data })) {
     return;
@@ -99,18 +250,19 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
   alignArrays(unique1, unique2);
 
   const image1Bg = image1Data[0].slice(0, 4);
-  unique1.forEach((hashedLine, i) => {
-    if (hashedLine === alignArrays.PLACEHOLDER) {
-      image1Data.splice(i, 0, transparentLine(image1Bg, maxWidth));
-    }
-  });
-
   const image2Bg = image2Data[0].slice(0, 4);
-  unique2.forEach((hashedLine, i) => {
-    if (hashedLine === alignArrays.PLACEHOLDER) {
-      image2Data.splice(i, 0, transparentLine(image2Bg, maxWidth));
-    }
-  });
+
+  const segments = buildSegments(unique1, unique2);
+  simplifySegments(segments, SIMPLIFY_THRESHOLD);
+  const { out1, out2 } = reconstructImages(
+    segments, image1Data, image2Data, image1Bg, image2Bg, maxWidth,
+  );
+
+  // Mutate in place to match the existing API contract
+  image1Data.length = 0;
+  image2Data.length = 0;
+  for (const row of out1) image1Data.push(row);
+  for (const row of out2) image2Data.push(row);
 }
 
 /**
