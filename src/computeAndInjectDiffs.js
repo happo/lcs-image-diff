@@ -88,7 +88,7 @@ function toUniqueHashes(hashes1, hashes2) {
 }
 
 // How close (in rows) two gap blocks must be to be cancelled or combined.
-const SIMPLIFY_THRESHOLD = 40;
+const SIMPLIFY_THRESHOLD = 100;
 
 /**
  * Builds a segment list from the aligned hash arrays. Each segment describes a
