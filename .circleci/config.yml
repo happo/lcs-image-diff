@@ -11,7 +11,7 @@ jobs:
 
       - run:
           name: Install pnpm package manager
-          command: sudo npm install -g pnpm@10
+          command: sudo npm install -g pnpm@11
       - run:
           name: Install Dependencies
           command: pnpm install

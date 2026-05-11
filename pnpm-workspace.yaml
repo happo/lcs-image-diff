@@ -1,1 +1,15 @@
 # Defines the root of the pnpm workspace
+
+# Settings migrated from .npmrc (pnpm 11 no longer reads .npmrc for these)
+linkWorkspacePackages: true
+hoistPattern:
+  - '*'
+publicHoistPattern:
+  - '*eslint*'
+  - '*prettier*'
+strictPeerDependencies: false
+autoInstallPeers: true
+savePrefix: ''
+dedupePeerDependents: true
+allowBuilds:
+  sharp: true
