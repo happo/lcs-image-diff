@@ -19,6 +19,7 @@
   "packageManager": "pnpm",
   "scripts": {
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "release": "set -a && source .env && set +a && release-with-ease",
     "serve": "node server.js"
   },
   "prettier": {
@@ -34,6 +35,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
+    "release-with-ease": "2.3.4",
     "sharp": "^0.34.1"
   }
 }
