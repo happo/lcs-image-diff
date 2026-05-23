@@ -13,7 +13,12 @@ savePrefix: ''
 dedupePeerDependents: true
 allowBuilds:
   sharp: true
+
+# Match dependabot npm cooldown (default-days: 2 in .github/dependabot.yml)
+minimumReleaseAge: 2880
+
 minimumReleaseAgeExclude:
+  - release-with-ease
   - minimatch@3.1.3
   - minimatch@3.1.4
   - brace-expansion@1.1.13
