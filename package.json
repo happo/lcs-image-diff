@@ -31,11 +31,11 @@
     "arrowParens": "avoid"
   },
   "dependencies": {
-    "imagetracerjs": "^1.2.5"
+    "imagetracerjs": "^1.2.6"
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "release-with-ease": "2.3.4",
-    "sharp": "^0.34.1"
+    "sharp": "^0.34.5"
   }
 }
