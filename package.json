@@ -10,13 +10,21 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./*.js": {
-      "types": "./dist/*.d.ts",
-      "default": "./dist/*.js"
+    "./computeAndInjectDiffs.js": {
+      "types": "./dist/computeAndInjectDiffs.d.ts",
+      "default": "./dist/computeAndInjectDiffs.js"
     },
-    "./src/*.js": {
-      "types": "./dist/*.d.ts",
-      "default": "./dist/*.js"
+    "./colorDelta.js": {
+      "types": "./dist/colorDelta.d.ts",
+      "default": "./dist/colorDelta.js"
+    },
+    "./src/computeAndInjectDiffs.js": {
+      "types": "./dist/computeAndInjectDiffs.d.ts",
+      "default": "./dist/computeAndInjectDiffs.js"
+    },
+    "./src/colorDelta.js": {
+      "types": "./dist/colorDelta.d.ts",
+      "default": "./dist/colorDelta.js"
     },
     "./package.json": "./package.json"
   },

@@ -51,6 +51,12 @@ assert.strictEqual(result.maxDiff, 1, 'maxDiff for differently sized images');
 assert.match(result.trace.toSVG(), /^<svg[^>]*viewBox="0 0 100 100"/, 'trace svg');
 
 assert.strictEqual(DIFF_TRACE_PADDING, 10, 'DIFF_TRACE_PADDING named export');
+// Deprecated, but still has to work until the next major.
+assert.strictEqual(
+  imageDiff.DIFF_TRACE_PADDING,
+  DIFF_TRACE_PADDING,
+  'deprecated imageDiff.DIFF_TRACE_PADDING alias',
+);
 
 // The deep imports have to resolve to working code, not just resolve.
 const delta = colorDeltaChannels(0, 0, 0, 255, 255, 255, 255, 255);

@@ -105,19 +105,24 @@ const withOwnHash = imageDiff(bitmap1, bitmap2, { hashFunction });
 
 Return value: `{ data: Uint8ClampedArray, width, height, diff: number (0–1), trace: DiffTrace }`.
 
-`DIFF_TRACE_PADDING` is a named export (it used to hang off the `imageDiff`
-function).
+`DIFF_TRACE_PADDING` is a named export. It is also still reachable as
+`imageDiff.DIFF_TRACE_PADDING`, which is deprecated and goes away in the next
+major -- the deprecation is written on its own const in `index.ts` so that it
+reaches the emitted declaration.
 
-Individual modules are reachable too, and `scripts/smoke.ts` covers these so
-they cannot break silently:
+Two modules are exported individually. They are listed one by one in
+`exports` rather than matched by a wildcard, so the public surface is only
+what callers actually import -- adding another means adding an entry.
 
 ```js
 import computeAndInjectDiffs from 'lcs-image-diff/computeAndInjectDiffs.js';
-
-// The `src/` prefix predates this package having an `exports` field. Callers
-// elsewhere still use it, so it stays mapped to the same module.
-import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
+import { colorDeltaChannels } from 'lcs-image-diff/colorDelta.js';
 ```
+
+Both are also reachable under a `src/` prefix, which predates this package
+having an `exports` field. Callers elsewhere still use that spelling; it goes
+away in a breaking change. `scripts/smoke.ts` covers every one of these paths
+so none of them can break silently.
 
 ## Dependencies
 

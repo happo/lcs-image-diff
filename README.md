@@ -112,8 +112,8 @@ import { DIFF_TRACE_PADDING } from 'lcs-image-diff';
 document.getElementById('#trace-svg').style.margin = `0 ${DIFF_TRACE_PADDING}px`;
 ```
 
-> **Breaking change:** this used to be `imageDiff.DIFF_TRACE_PADDING`, a
-> property hung off the function. It is a named export now.
+`imageDiff.DIFF_TRACE_PADDING` still works, but is deprecated and will be
+removed in the next major.
 
 ## Authors
 
