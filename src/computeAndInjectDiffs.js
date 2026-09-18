@@ -289,7 +289,7 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
  * Please note that this method MUTATES data.
  *
  * `image1InjectedRows` and `image2InjectedRows` hold the row indices this
- * added to each image to make up a height difference. They are the only way to
+ * method added to each image to make up a height difference. They are the only way to
  * tell those rows apart from the image's own content -- an injected line is
  * the image's background blended with a fixed grey, which real content can
  * match exactly.

@@ -93,19 +93,30 @@ describe('injected rows', () => {
     122,
   ];
 
-  it('reports which rows it added to make up a height difference', async () => {
-    const { image1Data, image1InjectedRows, image2InjectedRows } =
+  // Whichever image is shorter is the one that gets rows, so each set is
+  // filled by its own branch and each needs its own case.
+  it.each([
+    ['image1 is shorter', 20, 26],
+    ['image2 is shorter', 26, 20],
+  ])('reports which rows it added when %s', async (_name, height1, height2) => {
+    const { image1Data, image2Data, image1InjectedRows, image2InjectedRows } =
       computeAndInjectDiffs({
-        image1: solidImage(20, 4, [200, 30, 30, 255]),
-        image2: solidImage(26, 4, [200, 30, 30, 255]),
+        image1: solidImage(height1, 4, [200, 30, 30, 255]),
+        image2: solidImage(height2, 4, [200, 30, 30, 255]),
       });
 
-    // The shorter image is the one that needed rows.
-    expect(image1InjectedRows.size).toBe(image1Data.length - 20);
-    expect(image2InjectedRows.size).toBe(0);
+    expect(image1InjectedRows.size).toBe(image1Data.length - height1);
+    expect(image2InjectedRows.size).toBe(image2Data.length - height2);
+
+    // Only the shorter one needed any.
+    expect(Math.min(image1InjectedRows.size, image2InjectedRows.size)).toBe(0);
+    expect(Math.max(image1InjectedRows.size, image2InjectedRows.size)).toBe(6);
 
     for (const y of image1InjectedRows) {
       expect([...image1Data[y].slice(0, 4)]).toEqual(injectedColor);
+    }
+    for (const y of image2InjectedRows) {
+      expect([...image2Data[y].slice(0, 4)]).toEqual(injectedColor);
     }
   });
 
