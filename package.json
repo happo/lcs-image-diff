@@ -36,6 +36,6 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "release-with-ease": "2.3.4",
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.4"
   }
 }
