@@ -28,6 +28,7 @@
   "packageManager": "pnpm",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "smoke": "tsc -p tsconfig.smoke.json && tsx scripts/smoke.ts",
     "prepack": "pnpm run build",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "tsc": "tsc",

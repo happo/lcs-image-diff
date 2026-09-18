@@ -19,3 +19,8 @@ jobs:
       - run: pnpm tsc
       - name: Check that the package builds
         run: pnpm run build
+
+      # The test suite imports from src/, so this is the only thing that
+      # exercises what `main`/`types`/`exports` actually point at.
+      - name: Check the published entry point loads and runs
+        run: pnpm run smoke

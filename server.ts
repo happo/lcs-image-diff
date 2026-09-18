@@ -9,7 +9,9 @@ import path from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PORT = Number(process.env.PORT) || 3456;
+// `PORT=0` asks for an ephemeral port, so only fall back when the variable
+// is absent -- `Number(...) || 3456` would turn that 0 back into 3456.
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3456;
 const SNAPSHOTS_DIR = join(__dirname, 'snapshots');
 
 function getSnapshots(): string[] {
@@ -261,5 +263,8 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Diff viewer running at http://localhost:${PORT}`);
+  // With PORT=0 the interesting number is the one the OS picked, not the 0.
+  const address = server.address();
+  const port = typeof address === 'object' && address !== null ? address.port : PORT;
+  console.log(`Diff viewer running at http://localhost:${port}`);
 });

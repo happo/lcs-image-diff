@@ -1,0 +1,10 @@
+// Type checks the smoke script against the BUILT package, so it only works
+// after `pnpm run build`. Kept out of tsconfig.json so `pnpm tsc` still works
+// on a fresh clone with no dist/.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["scripts/smoke.ts"]
+}
