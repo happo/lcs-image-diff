@@ -1,6 +1,12 @@
 const ALLOWED_INEQUALITY = 0.3;
 
-export default function similarEnough({ image1Data, image2Data }) {
+export default function similarEnough({
+  image1Data,
+  image2Data,
+}: {
+  image1Data: ArrayLike<number>[];
+  image2Data: ArrayLike<number>[];
+}): boolean {
   const { length } = image1Data;
   if (length !== image2Data.length) {
     return false;

@@ -9,6 +9,20 @@ updates:
     cooldown:
       default-days: 2
     groups:
+      # An update joins the FIRST group it matches, so these have to come
+      # before the catch-all below -- otherwise it takes their patches and
+      # minors and these only ever see majors. Both toolchains have to move
+      # in lockstep, which is the whole reason for grouping them.
+      babel:
+        patterns:
+          - '@babel/*'
+          - 'babel-*'
+
+      jest:
+        patterns:
+          - 'jest'
+          - '@jest/*'
+
       patches-and-minors:
         update-types:
           - 'patch'
@@ -20,3 +34,9 @@ updates:
       interval: daily
     cooldown:
       default-days: 7
+    groups:
+      actions:
+        update-types:
+          - 'patch'
+          - 'minor'
+          - 'major'

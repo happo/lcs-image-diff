@@ -3,9 +3,35 @@
   "version": "4.1.0",
   "description": "A JavaScript library to diff two images. Uses the Longest-Common-Subsequence algorithm to allow content to shift.",
   "type": "module",
-  "main": "src/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./computeAndInjectDiffs.js": {
+      "types": "./dist/computeAndInjectDiffs.d.ts",
+      "default": "./dist/computeAndInjectDiffs.js"
+    },
+    "./colorDelta.js": {
+      "types": "./dist/colorDelta.d.ts",
+      "default": "./dist/colorDelta.js"
+    },
+    "./src/computeAndInjectDiffs.js": {
+      "types": "./dist/computeAndInjectDiffs.d.ts",
+      "default": "./dist/computeAndInjectDiffs.js"
+    },
+    "./src/colorDelta.js": {
+      "types": "./dist/colorDelta.d.ts",
+      "default": "./dist/colorDelta.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
-    "src/*.js"
+    "dist",
+    "src",
+    "!src/__tests__"
   ],
   "authors": [
     "Henric Persson <henric@happo.io>",
@@ -18,9 +44,14 @@
   "license": "MIT",
   "packageManager": "pnpm",
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "smoke": "tsc -p tsconfig.smoke.json && node scripts/smoke.ts",
+    "prepack": "pnpm run build",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "tsc": "tsc",
     "release": "set -a && source .env && set +a && release-with-ease",
-    "serve": "node server.js"
+    "serve": "node server.ts",
+    "profile": "node profile.ts"
   },
   "prettier": {
     "trailingComma": "all",
@@ -34,8 +65,14 @@
     "imagetracerjs": "^1.2.6"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
+    "@babel/core": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "@jest/globals": "^30.5.1",
+    "@types/node": "^24.13.5",
+    "babel-jest": "^30.5.1",
+    "jest": "^30.5.1",
     "release-with-ease": "2.7.2",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.4",
+    "typescript": "^7.0.2"
   }
 }

@@ -14,6 +14,11 @@ dedupePeerDependents: true
 allowBuilds:
   sharp: true
 
+  # Optional native speedups for jest and its resolver. Both ship prebuilt
+  # binaries and fall back gracefully, so there is no reason to compile them.
+  '@parcel/watcher': false
+  unrs-resolver: false
+
 # Match dependabot npm cooldown (default-days: 2 in .github/dependabot.yml)
 minimumReleaseAge: 2880
 

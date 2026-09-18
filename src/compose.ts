@@ -1,8 +1,17 @@
-function isOpaque(color) {
+/** A color as four channel values: red, green, blue, alpha. */
+export type Rgba = readonly [number, number, number, number];
+
+/**
+ * Anything four channel values can be read out of. Rows of pixel data are
+ * passed in directly, so this covers them as well as standalone colors.
+ */
+export type ColorLike = Rgba | number[] | Uint8ClampedArray;
+
+function isOpaque(color: ColorLike): boolean {
   return color[3] === 255;
 }
 
-function isFullyTransparent(color) {
+function isFullyTransparent(color: ColorLike): boolean {
   return color[3] === 0;
 }
 
@@ -13,9 +22,8 @@ function isFullyTransparent(color) {
  *
  * This is a quicker implementation of Math.round((a * b) / 255.0)
  */
-function int8Mult(a, b) {
+function int8Mult(a: number, b: number): number {
   const t = (a * b) + 0x80;
-  // eslint-disable-next-line no-bitwise
   return ((t >> 8) + t) >> 8;
 }
 
@@ -24,7 +32,10 @@ function int8Mult(a, b) {
  *
  * This version is faster than a version based on floating point math.
  */
-export default function compose(foreground, background) {
+export default function compose(
+  foreground: ColorLike,
+  background: ColorLike,
+): ColorLike {
   if (isOpaque(foreground) || isFullyTransparent(background)) {
     return foreground;
   }

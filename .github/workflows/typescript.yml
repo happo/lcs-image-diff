@@ -1,0 +1,26 @@
+name: TypeScript
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+  tsc:
+    runs-on: ubuntu-latest
+    name: tsc
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-env
+      - run: pnpm tsc
+      - name: Check that the package builds
+        run: pnpm run build
+
+      # The test suite imports from src/, so this is the only thing that
+      # exercises what `main`/`types`/`exports` actually point at.
+      - name: Check the published entry point loads and runs
+        run: pnpm run smoke

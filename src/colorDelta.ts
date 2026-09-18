@@ -1,23 +1,25 @@
+import type { ColorLike } from './compose.ts';
+
 const MAX_YIQ_DIFFERENCE = 35215;
 
-function rgb2y(r, g, b) {
+function rgb2y(r: number, g: number, b: number): number {
   return r * 0.29889531 + g * 0.58662247 + b * 0.11448223;
 }
 
-function rgb2i(r, g, b) {
+function rgb2i(r: number, g: number, b: number): number {
   return r * 0.59597799 - g * 0.2741761 - b * 0.32180189;
 }
 
-function rgb2q(r, g, b) {
+function rgb2q(r: number, g: number, b: number): number {
   return r * 0.21147017 - g * 0.52261711 + b * 0.31114694;
 }
 
 // blend semi-transparent color with white
-function blend(color, alpha) {
+function blend(color: number, alpha: number): number {
   return 255 + (color - 255) * alpha;
 }
 
-function isFillerPixel(r, g, b, a) {
+function isFillerPixel(r: number, g: number, b: number, a: number): boolean {
   return r === 1 && g === 1 && b === 1 && a === 1;
 }
 
@@ -30,7 +32,16 @@ function isFillerPixel(r, g, b, a) {
  *
  * Modified from https://github.com/mapbox/pixelmatch
  */
-export function colorDeltaChannels(r1, g1, b1, a1, r2, g2, b2, a2) {
+export function colorDeltaChannels(
+  r1: number,
+  g1: number,
+  b1: number,
+  a1: number,
+  r2: number,
+  g2: number,
+  b2: number,
+  a2: number,
+): number {
   if (r1 === r2 && g1 === g2 && b1 === b2 && a1 === a2) {
     return 0;
   }
@@ -80,7 +91,7 @@ export function colorDeltaChannels(r1, g1, b1, a1, r2, g2, b2, a2) {
  *
  * @deprecated use `colorDeltaChannels` instead
  */
-function colorDelta(previousPixel, currentPixel) {
+function colorDelta(previousPixel: ColorLike, currentPixel: ColorLike): number {
   return colorDeltaChannels(
     previousPixel[0],
     previousPixel[1],

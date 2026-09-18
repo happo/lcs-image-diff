@@ -1,8 +1,11 @@
-import getDiffPixel from '../getDiffPixel.js';
+import { beforeEach, expect, it } from '@jest/globals';
 
-let subject;
-let previousPixel;
-let currentPixel;
+import getDiffPixel from '../getDiffPixel.ts';
+import type { DiffPixel } from '../getDiffPixel.ts';
+
+let subject: () => DiffPixel;
+let previousPixel: number[];
+let currentPixel: number[];
 
 beforeEach(() => {
   previousPixel = [255, 255, 255, 255];

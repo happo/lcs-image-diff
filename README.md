@@ -21,6 +21,9 @@ Image 1 | Image 2 | Image diff | Traced
 npm install lcs-image-diff
 ```
 
+The package is written in TypeScript and ships its own type declarations, so
+there is no `@types/lcs-image-diff` to install.
+
 ## Usage in the browser
 
 _Pro tip:_ You're best off using this module in a web worker, to offload heavy
@@ -101,13 +104,16 @@ container that bleeds out a little to account for the extra size.
 <div id="trace-svg" style="margin: 0 -10px"></div>
 ```
 
-...or if you hate magic numbers, use the constant attached to the `imageDiff` function:
+...or if you hate magic numbers, import the constant:
 
 ```js
-document.getElementById('#trace-svg').style.margin = `0 ${
-  imageDiff.DIFF_TRACE_PADDING
-}px`;
+import { DIFF_TRACE_PADDING } from 'lcs-image-diff';
+
+document.getElementById('#trace-svg').style.margin = `0 ${DIFF_TRACE_PADDING}px`;
 ```
+
+`imageDiff.DIFF_TRACE_PADDING` still works, but is deprecated and will be
+removed in the next major.
 
 ## Authors
 

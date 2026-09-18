@@ -1,4 +1,6 @@
-import colorDelta, { colorDeltaChannels } from '../colorDelta.js';
+import { describe, expect, it } from '@jest/globals';
+
+import colorDelta, { colorDeltaChannels } from '../colorDelta.ts';
 
 describe('colorDelta', () => {
   it('produces the same results as colorDeltaChannels', () => {
