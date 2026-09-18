@@ -217,17 +217,29 @@ function reconstructImages(segments, image1Data, image2Data, image1Bg, image2Bg,
   const out1 = [];
   const out2 = [];
 
+  // Which rows of each result were injected here rather than taken from the
+  // image. This cannot be recovered from the pixels afterwards: an injected
+  // line is the image's own background blended with a fixed grey, and real
+  // content can be exactly that color.
+  const injected1 = new Set();
+  const injected2 = new Set();
+
   for (const seg of segments) {
     for (const row of seg.rows) {
+      const y = out1.length;
       if (seg.type === 'before') {
         out1.push(transparentLine(image1Bg, maxWidth));
+        injected1.add(y);
         out2.push(image2Data[row.i2]);
       } else if (seg.type === 'after') {
         out1.push(image1Data[row.i1]);
         out2.push(transparentLine(image2Bg, maxWidth));
+        injected2.add(y);
       } else if (seg.type === 'neutral') {
         out1.push(transparentLine(image1Bg, maxWidth));
+        injected1.add(y);
         out2.push(transparentLine(image2Bg, maxWidth));
+        injected2.add(y);
       } else {
         out1.push(image1Data[row.i1]);
         out2.push(image2Data[row.i2]);
@@ -235,12 +247,13 @@ function reconstructImages(segments, image1Data, image2Data, image1Bg, image2Bg,
     }
   }
 
-  return { out1, out2 };
+  return { out1, out2, injected1, injected2 };
 }
 
 function align({ image1Data, image2Data, maxWidth, hashFunction }) {
   if (similarEnough({ image1Data, image2Data })) {
-    return;
+    // Nothing was aligned, so nothing was injected.
+    return { injected1: new Set(), injected2: new Set() };
   }
 
   const hashedImage1Data = image1Data.map(hashFunction);
@@ -254,7 +267,7 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
 
   const segments = buildSegments(unique1, unique2);
   simplifySegments(segments, SIMPLIFY_THRESHOLD);
-  const { out1, out2 } = reconstructImages(
+  const { out1, out2, injected1, injected2 } = reconstructImages(
     segments, image1Data, image2Data, image1Bg, image2Bg, maxWidth,
   );
 
@@ -263,6 +276,8 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
   image2Data.length = 0;
   for (const row of out1) image1Data.push(row);
   for (const row of out2) image2Data.push(row);
+
+  return { injected1, injected2 };
 }
 
 /**
@@ -273,9 +288,15 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
  *
  * Please note that this method MUTATES data.
  *
+ * `image1InjectedRows` and `image2InjectedRows` hold the row indices this
+ * added to each image to make up a height difference. They are the only way to
+ * tell those rows apart from the image's own content -- an injected line is
+ * the image's background blended with a fixed grey, which real content can
+ * match exactly.
+ *
  * @param {Array} image1
  * @param {Array} image2
- * @return {Object}
+ * @return {{ image1Data: Array, image2Data: Array, image1InjectedRows: Set<number>, image2InjectedRows: Set<number> }}
  */
 export default function computeAndInjectDiffs({
   image1,
@@ -287,7 +308,7 @@ export default function computeAndInjectDiffs({
   const image1Data = imageTo2DArray(image1, maxWidth - image1.width);
   const image2Data = imageTo2DArray(image2, maxWidth - image2.width);
 
-  align({
+  const { injected1, injected2 } = align({
     image1Data,
     image2Data,
     maxWidth,
@@ -297,5 +318,7 @@ export default function computeAndInjectDiffs({
   return {
     image1Data,
     image2Data,
+    image1InjectedRows: injected1,
+    image2InjectedRows: injected2,
   };
 }
