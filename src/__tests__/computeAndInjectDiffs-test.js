@@ -4,7 +4,10 @@ import path from 'path';
 import crypto from 'crypto';
 import sharp from 'sharp';
 
-import computeAndInjectDiffs from '../computeAndInjectDiffs.js';
+import computeAndInjectDiffs, {
+  hashRowWithBuffer,
+  hashRowWithCharCodes,
+} from '../computeAndInjectDiffs.js';
 import compose from '../compose.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -147,5 +150,87 @@ describe('injected rows', () => {
 
     // The painted row survives as content rather than being called injected.
     expect(contentRows.length).toBe(1);
+  });
+});
+
+describe('row hashing', () => {
+  // Jest runs under Node, so the module always picks the Buffer
+  // implementation. The other one ships to browsers, so it is tested directly
+  // and against its counterpart.
+  const both = [
+    ['Buffer', hashRowWithBuffer],
+    ['fromCharCode', hashRowWithCharCodes],
+  ];
+
+  it.each(both)('%s keeps every byte value distinct', (_name, hash) => {
+    const row = new Uint8ClampedArray(256);
+    for (let i = 0; i < 256; i++) row[i] = i;
+
+    const hashed = hash(row);
+    expect(hashed).toHaveLength(256);
+    expect(new Set(hashed).size).toBe(256);
+  });
+
+  it.each(both)('%s distinguishes rows differing in one byte', (_name, hash) => {
+    const a = new Uint8ClampedArray(64).fill(7);
+    const b = new Uint8ClampedArray(64).fill(7);
+    b[63] = 8;
+
+    expect(hash(a)).not.toBe(hash(b));
+    expect(hash(a)).toBe(hash(a.slice()));
+  });
+
+  it('agrees across a row longer than one fromCharCode call', () => {
+    // The browser implementation walks the row 8192 bytes at a time.
+    const row = new Uint8ClampedArray(20000);
+    for (let i = 0; i < row.length; i++) row[i] = (i * 31) % 256;
+
+    expect(hashRowWithCharCodes(row)).toBe(hashRowWithBuffer(row));
+  });
+
+  it('agrees on rows of every length around the slice boundary', () => {
+    for (const length of [0, 1, 8191, 8192, 8193, 16384, 16385]) {
+      const row = new Uint8ClampedArray(length);
+      for (let i = 0; i < length; i++) row[i] = (i * 17 + 3) % 256;
+
+      expect(hashRowWithCharCodes(row)).toBe(hashRowWithBuffer(row));
+    }
+  });
+
+  it('does not read a row as an alignment sentinel', () => {
+    // Rows that cannot anchor the alignment are marked with a value that must
+    // not be anything a hash can produce. The marker used to be a string, and
+    // a four-byte row spells one exactly, so a one-pixel-wide image could
+    // produce a row equal to it. The bytes below spell the old marker for row
+    // 10; they must align no differently from any other bytes.
+    const image = (height, contentRow, bytes) => {
+      const data = Buffer.alloc(height * 4);
+      for (let y = 0; y < height; y++) {
+        const pos = y * 4;
+        const [r, g, b, a] = y === contentRow ? bytes : [255, 255, 255, 255];
+        data[pos] = r;
+        data[pos + 1] = g;
+        data[pos + 2] = b;
+        data[pos + 3] = a;
+      }
+      return { data, width: 1, height };
+    };
+
+    // Injected line, white, or the content row -- the shape of the result,
+    // independent of what the content row's bytes happen to be.
+    const shape = bytes =>
+      computeAndInjectDiffs({
+        image1: image(30, 10, bytes),
+        image2: image(34, 12, [10, 20, 30, 255]),
+      })
+        .image1Data.map(row => {
+          if (row[3] === 122) return 'injected';
+          return row[0] === 255 && row[1] === 255 && row[2] === 255
+            ? 'white'
+            : 'content';
+        })
+        .join(' ');
+
+    expect(shape([0, 97, 49, 48])).toBe(shape([7, 8, 9, 255]));
   });
 });

@@ -26,6 +26,23 @@ function imageTo2DArray({ data, width, height }, paddingRight) {
 // the bytes as arguments, and a whole row would overflow the argument limit.
 const CHARS_PER_CALL = 8192;
 
+export function hashRowWithBuffer(row) {
+  return Buffer.from(row.buffer, row.byteOffset, row.byteLength).toString(
+    'latin1',
+  );
+}
+
+export function hashRowWithCharCodes(row) {
+  let result = '';
+  for (let i = 0; i < row.length; i += CHARS_PER_CALL) {
+    result += String.fromCharCode.apply(
+      null,
+      row.subarray(i, i + CHARS_PER_CALL),
+    );
+  }
+  return result;
+}
+
 function resolveHashFn() {
   // Map each byte to the character with that code. The mapping is one to one,
   // so rows still compare exactly -- a digest would be shorter, but a
@@ -36,21 +53,9 @@ function resolveHashFn() {
   // became a string several times its own size before being encoded. Node's
   // `Buffer` does the same mapping natively and is far quicker than doing it
   // in JavaScript, so it is used where it exists.
-  if (typeof Buffer !== 'undefined') {
-    return row =>
-      Buffer.from(row.buffer, row.byteOffset, row.byteLength).toString('latin1');
-  }
-
-  return row => {
-    let result = '';
-    for (let i = 0; i < row.length; i += CHARS_PER_CALL) {
-      result += String.fromCharCode.apply(
-        null,
-        row.subarray(i, i + CHARS_PER_CALL),
-      );
-    }
-    return result;
-  };
+  return typeof Buffer !== 'undefined'
+    ? hashRowWithBuffer
+    : hashRowWithCharCodes;
 }
 
 const HASH_FN = resolveHashFn();
@@ -75,24 +80,37 @@ function transparentLine(rawBgPixel, width) {
 // identical white rows in a blank image) that would cause spurious matches.
 const MAX_ROW_OCCURRENCES = 20;
 
+/**
+ * A value equal to itself and to nothing else, marking a row that may not be
+ * used as an alignment anchor.
+ *
+ * It has to be an object. The aligner compares rows with `===`, and a hash is
+ * whatever the hash function returned -- for the default that is the row's own
+ * bytes as a string, so any string used here is one some row could produce.
+ * The sentinels used to be `\0a${i}`, which a four-byte row spells exactly.
+ */
+function nonMatch() {
+  return {};
+}
+
 function toUniqueHashes(hashes1, hashes2) {
   const counts1 = new Map();
   const counts2 = new Map();
   for (const h of hashes1) counts1.set(h, (counts1.get(h) || 0) + 1);
   for (const h of hashes2) counts2.set(h, (counts2.get(h) || 0) + 1);
-  const unique1 = hashes1.map((h, i) => {
+  const unique1 = hashes1.map(h => {
     const c1 = counts1.get(h);
     const c2 = counts2.get(h);
     return c1 <= MAX_ROW_OCCURRENCES && c2 && c2 <= MAX_ROW_OCCURRENCES
       ? h
-      : `\0a${i}`;
+      : nonMatch();
   });
-  const unique2 = hashes2.map((h, i) => {
+  const unique2 = hashes2.map(h => {
     const c1 = counts1.get(h);
     const c2 = counts2.get(h);
     return c2 <= MAX_ROW_OCCURRENCES && c1 && c1 <= MAX_ROW_OCCURRENCES
       ? h
-      : `\0b${i}`;
+      : nonMatch();
   });
   return [unique1, unique2];
 }
