@@ -8,7 +8,7 @@ A JavaScript library that compares two images and generates a visual diff using 
 src/
   index.js                  # Main export: imageDiff()
   alignArrays.js            # Band-limited LCS dynamic programming
-  computeAndInjectDiffs.js  # Row hashing, alignment, gap injection
+  computeAndInjectDiffs.js  # Row interning, alignment, gap injection
   createDiffImage.js        # Renders the final diff image + DiffTrace
   getDiffPixel.js           # Per-pixel diff computation
   colorDelta.js             # YIQ perceptual color difference
@@ -39,9 +39,9 @@ ESM (`"type": "module"` in package.json). Tests require `NODE_OPTIONS=--experime
 
 **LCS alignment** (`alignArrays.js`): Band-limited DP — stores only a diagonal band of the DP table, reducing memory from O(m×n) to O(n × band_width). Direction constants: `UP_LEFT` (match), `UP` (gap in a), `LEFT` (gap in b).
 
-**Frequency-capped row matching** (`computeAndInjectDiffs.js`): Rows appearing >20 times (`MAX_ROW_OCCURRENCES`) in either image are excluded as alignment anchors — prevents blank rows from causing false LCS matches. Excluded rows are marked with an object rather than a string, so no row hash can collide with the marker.
+**Frequency-capped row matching** (`computeAndInjectDiffs.js`): Rows appearing >20 times (`MAX_ROW_OCCURRENCES`) in either image are excluded as alignment anchors — prevents blank rows from causing false LCS matches. Excluded rows are marked with an object rather than a string, so no row key — a number by default, or whatever a custom `hashFunction` returns — can collide with the marker.
 
-**Row hashing** (`computeAndInjectDiffs.js`): Each row is keyed on its own bytes, mapped one byte to one character — `Buffer` in Node, `String.fromCharCode` in browsers. The mapping is injective, so two rows compare equal only if identical.
+**Row interning** (`computeAndInjectDiffs.js`): Each distinct row is given a number, so the LCS compares numbers rather than rows. Rows are grouped by a sampled fingerprint (every `FINGERPRINT_STRIDE` bytes) and then compared **in full** within a group — `Buffer.compare` in Node, a byte loop in browsers — so equal numbers mean identical rows. The fingerprint only decides which rows are worth comparing; it never decides equality. Once a group exceeds `MAX_CANDIDATES` distinct rows it switches to keying them by their full contents (`hashRowWithBuffer` / `hashRowWithCharCodes`), which bounds what would otherwise be a quadratic scan. The interner is created per call: its numbers mean nothing outside one alignment and it holds the rows it is given.
 
 **Color delta** (`colorDelta.js`): YIQ NTSC color space (from pixelmatch). Weighted: `0.5053×y² + 0.299×i² + 0.1957×q²`, normalized by `MAX_YIQ_DIFFERENCE`. Sign encodes lighter vs darker.
 
@@ -62,13 +62,13 @@ import imageDiff from 'lcs-image-diff';
 const { data, width, height, diff, trace } = imageDiff(image1, image2);
 const svg = trace.toSVG();
 
-// Node.js: pass bitmap objects. Same call -- the default row hash works in
+// Node.js: pass bitmap objects. Same call -- the default row keying works in
 // both, so no hashFunction is needed.
 const result = imageDiff(bitmap1, bitmap2);
 
-// A custom hashFunction is still accepted. The default keeps every byte, so
-// rows compare equal only if identical; a shorter key is a little quicker but
-// a collision aligns two different rows as one.
+// A custom hashFunction is still accepted. The default compares rows in full,
+// so rows compare equal only if identical; a digest is a little quicker but a
+// collision aligns two different rows as one.
 const withOwnHash = imageDiff(bitmap1, bitmap2, { hashFunction });
 ```
 

@@ -43,22 +43,108 @@ export function hashRowWithCharCodes(row) {
   return result;
 }
 
-function resolveHashFn() {
-  // Map each byte to the character with that code. The mapping is one to one,
-  // so rows still compare exactly -- a digest would be shorter, but a
-  // collision would let the LCS treat two different rows as the same one.
-  //
-  // This used to be `btoa`, which takes a string: a typed array reaching it
-  // was stringified to a comma-separated list of decimals first, so every row
-  // became a string several times its own size before being encoded. Node's
-  // `Buffer` does the same mapping natively and is far quicker than doing it
-  // in JavaScript, so it is used where it exists.
-  return typeof Buffer !== 'undefined'
-    ? hashRowWithBuffer
-    : hashRowWithCharCodes;
+// Rows arrive as `Uint8ClampedArray`, which the comparisons below do not
+// accept. A `Uint8Array` over the same bytes costs nothing and is what both
+// of them want.
+const asBytes = row => new Uint8Array(row.buffer, row.byteOffset, row.byteLength);
+
+/** Compares two rows in full. Node does it in one native call. */
+export const rowsEqualWithBuffer = (a, b) => Buffer.compare(a, b) === 0;
+
+/** Compares two rows in full, without Node's `Buffer`. */
+export const rowsEqualInJavaScript = (a, b) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
+  return true;
+};
+
+const defaultRowsEqual =
+  typeof Buffer !== 'undefined' ? rowsEqualWithBuffer : rowsEqualInJavaScript;
+
+const defaultHashRow =
+  typeof Buffer !== 'undefined' ? hashRowWithBuffer : hashRowWithCharCodes;
+
+// How far apart the bytes are that decide which rows are worth comparing.
+// Sampling is what makes this cheap, and being wrong only costs a comparison,
+// so this only has to be good enough to keep the groups small. Not a multiple
+// of four, so it does not look at the same channel of every pixel it samples.
+const FINGERPRINT_STRIDE = 61;
+
+// How many rows may share a fingerprint before we stop comparing them one by
+// one. Without this a set of rows that all sample the same is quadratic.
+const MAX_CANDIDATES = 8;
+
+function fingerprint(row) {
+  let result = row.length;
+  for (let i = 0; i < row.length; i += FINGERPRINT_STRIDE) {
+    result = (Math.imul(result, 31) + row[i]) | 0;
+  }
+  return result;
 }
 
-const HASH_FN = resolveHashFn();
+/**
+ * Gives each distinct row a number, so the aligner compares numbers rather
+ * than rows.
+ *
+ * Rows are bucketed by a sampled fingerprint and then compared in full, so the
+ * numbers say exactly what the rows say: equal numbers mean identical rows,
+ * with no chance of a digest collision aligning two rows that differ. Holding
+ * a number per row rather than a copy of its bytes is also most of the memory
+ * this used to take.
+ *
+ * Must not be shared between calls: the ids mean nothing outside one
+ * alignment, and it keeps every row it is given alive.
+ */
+export function createInterner({
+  rowsEqual = defaultRowsEqual,
+  hashRow = defaultHashRow,
+} = {}) {
+  const groups = new Map();
+  let nextId = 0;
+
+  return row => {
+    const rowFingerprint = fingerprint(row);
+    let group = groups.get(rowFingerprint);
+    if (group === undefined) {
+      group = { candidates: [], byContents: null };
+      groups.set(rowFingerprint, group);
+    }
+
+    const bytes = asBytes(row);
+
+    // Too many rows sample alike to keep comparing them, so they are keyed by
+    // their full contents instead. Costs what hashing every row used to.
+    if (group.byContents !== null) {
+      const key = hashRow(bytes);
+      let id = group.byContents.get(key);
+      if (id === undefined) {
+        id = nextId;
+        nextId += 1;
+        group.byContents.set(key, id);
+      }
+      return id;
+    }
+
+    for (const candidate of group.candidates) {
+      if (rowsEqual(candidate.bytes, bytes)) return candidate.id;
+    }
+
+    const id = nextId;
+    nextId += 1;
+
+    if (group.candidates.length >= MAX_CANDIDATES) {
+      group.byContents = new Map(
+        group.candidates.map(candidate => [hashRow(candidate.bytes), candidate.id]),
+      );
+      group.byContents.set(hashRow(bytes), id);
+      group.candidates = [];
+      return id;
+    }
+
+    group.candidates.push({ bytes, id });
+    return id;
+  };
+}
 
 function transparentLine(rawBgPixel, width) {
   const bgPixel = compose([200, 200, 200, 50], rawBgPixel);
@@ -329,7 +415,9 @@ function align({ image1Data, image2Data, maxWidth, hashFunction }) {
 export default function computeAndInjectDiffs({
   image1,
   image2,
-  hashFunction = HASH_FN,
+  // A fresh interner per call: its numbers only mean anything within one
+  // alignment, and it holds on to the rows it is given.
+  hashFunction = createInterner(),
 }) {
   const maxWidth = Math.max(image1.width, image2.width);
 

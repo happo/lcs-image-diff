@@ -5,8 +5,10 @@ import crypto from 'crypto';
 import sharp from 'sharp';
 
 import computeAndInjectDiffs, {
+  createInterner,
   hashRowWithBuffer,
   hashRowWithCharCodes,
+  rowsEqualInJavaScript,
 } from '../computeAndInjectDiffs.js';
 import compose from '../compose.js';
 
@@ -231,5 +233,138 @@ describe('row hashing', () => {
     // md5 cannot produce the marker, so it aligns these correctly. With the
     // string marker the default aligned them to 29 rows instead of 34.
     expect(align()).toBe(align(createHash));
+  });
+});
+
+describe('row interning', () => {
+  // The default keys rows by identity rather than by their bytes. The result
+  // has to be what an exact, collision-free hash produces.
+  const image = (height, paint) => {
+    const width = 8;
+    const data = Buffer.alloc(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const pos = (y * width + x) * 4;
+        const [r, g, b, a] = paint(y, x);
+        data[pos] = r;
+        data[pos + 1] = g;
+        data[pos + 2] = b;
+        data[pos + 3] = a;
+      }
+    }
+    return { data, width, height };
+  };
+
+  const rowsOf = result =>
+    result.image1Data.map(row => [...row].join(',')).join('|') +
+    '//' +
+    result.image2Data.map(row => [...row].join(',')).join('|');
+
+  const bothWays = (image1, image2) => {
+    const interned = computeAndInjectDiffs({ image1, image2 });
+    const exact = computeAndInjectDiffs({
+      image1,
+      image2,
+      hashFunction: hashRowWithBuffer,
+    });
+    return [rowsOf(interned), rowsOf(exact)];
+  };
+
+  it('aligns the same as an exact hash', () => {
+    const [interned, exact] = bothWays(
+      image(30, y => (y === 12 ? [10, 20, 30, 255] : [255, 255, 255, 255])),
+      image(36, y => (y === 12 ? [10, 20, 30, 255] : [255, 255, 255, 255])),
+    );
+
+    expect(interned).toBe(exact);
+  });
+
+  it('aligns the same when rows differ only where the sampler never looks', () => {
+    // Every row distinct, differing in one byte the stride skips, so they all
+    // land in one group and the fallback that bounds it takes over.
+    const paint = offset => (y, x) =>
+      x === 1 ? [(y + offset) & 0xff, 0, 0, 255] : [255, 255, 255, 255];
+
+    const [interned, exact] = bothWays(image(40, paint(0)), image(46, paint(3)));
+
+    expect(interned).toBe(exact);
+  });
+
+  it('aligns the same when every row is identical', () => {
+    const white = () => [255, 255, 255, 255];
+    const [interned, exact] = bothWays(image(30, white), image(36, white));
+
+    expect(interned).toBe(exact);
+  });
+
+  describe('without Node', () => {
+    // Jest runs under Node, so the default picks the Buffer comparison and the
+    // Buffer hash. Browsers get the other two, and nothing reached them
+    // through a real alignment. Driving them through `computeAndInjectDiffs`
+    // covers interning and its fallback the way a browser would run them.
+    const inBrowser = () =>
+      createInterner({
+        rowsEqual: rowsEqualInJavaScript,
+        hashRow: hashRowWithCharCodes,
+      });
+
+    const comparedBothWays = (image1, image2) => [
+      rowsOf(computeAndInjectDiffs({ image1, image2, hashFunction: inBrowser() })),
+      rowsOf(
+        computeAndInjectDiffs({
+          image1,
+          image2,
+          hashFunction: hashRowWithBuffer,
+        }),
+      ),
+    ];
+
+    it('aligns the same as an exact hash', () => {
+      const [browser, exact] = comparedBothWays(
+        image(30, y => (y === 12 ? [10, 20, 30, 255] : [255, 255, 255, 255])),
+        image(36, y => (y === 12 ? [10, 20, 30, 255] : [255, 255, 255, 255])),
+      );
+
+      expect(browser).toBe(exact);
+    });
+
+    it('aligns the same when the fallback takes over', () => {
+      const paint = offset => (y, x) =>
+        x === 1 ? [(y + offset) & 0xff, 0, 0, 255] : [255, 255, 255, 255];
+
+      const [browser, exact] = comparedBothWays(
+        image(40, paint(0)),
+        image(46, paint(3)),
+      );
+
+      expect(browser).toBe(exact);
+    });
+  });
+
+  // Rows that differ only in their very last byte. A comparison that stops
+  // early, or a fingerprint trusted on its own, reads these as one row.
+  it.each([
+    ['in Node', undefined],
+    ['without Node', { rowsEqual: rowsEqualInJavaScript, hashRow: hashRowWithCharCodes }],
+  ])('tells rows apart that differ only in the last byte, %s', (_name, options) => {
+    const paint = offset => (y, x) =>
+      x === 7 ? [255, 255, 255, (y + offset) & 0xff] : [255, 255, 255, 255];
+
+    const interned = rowsOf(
+      computeAndInjectDiffs({
+        image1: image(30, paint(0)),
+        image2: image(36, paint(5)),
+        hashFunction: createInterner(options),
+      }),
+    );
+    const exact = rowsOf(
+      computeAndInjectDiffs({
+        image1: image(30, paint(0)),
+        image2: image(36, paint(5)),
+        hashFunction: hashRowWithBuffer,
+      }),
+    );
+
+    expect(interned).toBe(exact);
   });
 });
