@@ -16,8 +16,8 @@ importers:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@24.10.2)
       release-with-ease:
-        specifier: 2.3.4
-        version: 2.3.4
+        specifier: 2.7.2
+        version: 2.7.2
       sharp:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@24.10.2)
@@ -1109,8 +1109,9 @@ packages:
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
-  release-with-ease@2.3.4:
-    resolution: {integrity: sha512-fKeZUKDXkbTv57x7To1RXXskjXNOQFCON7qBPPunEfs9dGD1TdQKOMR+lt9IJKyJ07XwEOMAyXtf2pU/Re3S6A==}
+  release-with-ease@2.7.2:
+    resolution: {integrity: sha512-Cs5Nb11374BZia4s4VJxffdfSfkwxnshNjatA7/gs/eMsysh2DPG5hNIAjzdoJ2LgT/AgmfkFR+Orz546QPShw==}
+    engines: {node: '>=20'}
     hasBin: true
 
   require-directory@2.1.1:
@@ -2614,7 +2615,7 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  release-with-ease@2.3.4: {}
+  release-with-ease@2.7.2: {}
 
   require-directory@2.1.1: {}
 
