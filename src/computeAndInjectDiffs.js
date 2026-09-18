@@ -22,25 +22,35 @@ function imageTo2DArray({ data, width, height }, paddingRight) {
   return newData;
 }
 
+// `String.fromCharCode` is applied to a slice of the row at a time: it takes
+// the bytes as arguments, and a whole row would overflow the argument limit.
+const CHARS_PER_CALL = 8192;
+
 function resolveHashFn() {
-  // Safari has a bug where trying to reference `btoa` inside a web worker will
-  // result in an error, so we fall back to the slower (?) `JSON.stringify`. The
-  // only way to prevent this seems to be by using a try/catch. We do this in its
-  // own function to prevent our align function from being de-optimized.
+  // Map each byte to the character with that code. The mapping is one to one,
+  // so rows still compare exactly -- a digest would be shorter, but a
+  // collision would let the LCS treat two different rows as the same one.
   //
-  // https://bugs.webkit.org/show_bug.cgi?id=158576
-  try {
-    // Firefox, for some reason, gives us the same string when feeding typed
-    // arrays to `btoa`. Here, we can detect this behavior and fall back to the
-    // slower (?) but more accurate `JSON.stringify`.
-    if (btoa(new Uint8ClampedArray([0])) === btoa(new Uint8ClampedArray([1]))) {
-      // Firefox
-      return JSON.stringify;
-    }
-    return btoa;
-  } catch (e) {
-    return JSON.stringify;
+  // This used to be `btoa`, which takes a string: a typed array reaching it
+  // was stringified to a comma-separated list of decimals first, so every row
+  // became a string several times its own size before being encoded. Node's
+  // `Buffer` does the same mapping natively and is far quicker than doing it
+  // in JavaScript, so it is used where it exists.
+  if (typeof Buffer !== 'undefined') {
+    return row =>
+      Buffer.from(row.buffer, row.byteOffset, row.byteLength).toString('latin1');
   }
+
+  return row => {
+    let result = '';
+    for (let i = 0; i < row.length; i += CHARS_PER_CALL) {
+      result += String.fromCharCode.apply(
+        null,
+        row.subarray(i, i + CHARS_PER_CALL),
+      );
+    }
+    return result;
+  };
 }
 
 const HASH_FN = resolveHashFn();
