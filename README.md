@@ -55,13 +55,17 @@ const image2 = (await Jimp.read('2.jpg')).bitmap;
 const { data, width, height, diff } = imageDiff(image1, image2);
 ```
 
-### Custom row hashing
+### How rows are compared
 
-Rows are hashed to compare them while aligning the two images. The built-in
-hash keeps every byte, so two rows compare equal only if they are identical.
-You can pass your own `hashFunction` instead — a shorter key makes the
-alignment a little quicker, at the risk of a collision making two different
-rows align as one.
+Rows are keyed so they can be compared while aligning the two images. By
+default each distinct row is given a number: rows are grouped by a sampled
+fingerprint and then compared in full within a group, so two rows are only
+treated as the same row when every byte matches. The sampling decides which
+rows are worth comparing, never whether they are equal.
+
+You can pass your own `hashFunction` instead. A digest makes the alignment a
+little quicker, at the risk of a collision making two different rows align as
+one.
 
 ```js
 const crypto = require('crypto');
