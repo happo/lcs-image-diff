@@ -43,25 +43,26 @@ export function hashRowWithCharCodes(row) {
   return result;
 }
 
-const usingBuffer = typeof Buffer !== 'undefined';
+// Rows arrive as `Uint8ClampedArray`, which the comparisons below do not
+// accept. A `Uint8Array` over the same bytes costs nothing and is what both
+// of them want.
+const asBytes = row => new Uint8Array(row.buffer, row.byteOffset, row.byteLength);
 
-// Each row is wrapped once and compared many times, so the wrapping is worth
-// keeping: Node compares two Buffers with a single native call.
-const wrapRow = usingBuffer
-  ? row => Buffer.from(row.buffer, row.byteOffset, row.byteLength)
-  : row => row;
+/** Compares two rows in full. Node does it in one native call. */
+export const rowsEqualWithBuffer = (a, b) => Buffer.compare(a, b) === 0;
 
-const wrappedEqual = usingBuffer
-  ? (a, b) => a.equals(b)
-  : (a, b) => {
-      if (a.length !== b.length) return false;
-      for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
-      return true;
-    };
+/** Compares two rows in full, without Node's `Buffer`. */
+export const rowsEqualInJavaScript = (a, b) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
+  return true;
+};
 
-const wrappedToString = usingBuffer
-  ? wrapped => wrapped.toString('latin1')
-  : hashRowWithCharCodes;
+const defaultRowsEqual =
+  typeof Buffer !== 'undefined' ? rowsEqualWithBuffer : rowsEqualInJavaScript;
+
+const defaultHashRow =
+  typeof Buffer !== 'undefined' ? hashRowWithBuffer : hashRowWithCharCodes;
 
 // How far apart the bytes are that decide which rows are worth comparing.
 // Sampling is what makes this cheap, and being wrong only costs a comparison,
@@ -94,53 +95,53 @@ function fingerprint(row) {
  * Must not be shared between calls: the ids mean nothing outside one
  * alignment, and it keeps every row it is given alive.
  */
-function createInterner() {
-  const buckets = new Map();
+export function createInterner({
+  rowsEqual = defaultRowsEqual,
+  hashRow = defaultHashRow,
+} = {}) {
+  const groups = new Map();
   let nextId = 0;
 
   return row => {
-    const print = fingerprint(row);
-    let bucket = buckets.get(print);
-    if (bucket === undefined) {
-      bucket = { candidates: [], byContents: null };
-      buckets.set(print, bucket);
+    const rowFingerprint = fingerprint(row);
+    let group = groups.get(rowFingerprint);
+    if (group === undefined) {
+      group = { candidates: [], byContents: null };
+      groups.set(rowFingerprint, group);
     }
 
-    const wrapped = wrapRow(row);
+    const bytes = asBytes(row);
 
     // Too many rows sample alike to keep comparing them, so they are keyed by
     // their full contents instead. Costs what hashing every row used to.
-    if (bucket.byContents !== null) {
-      const key = wrappedToString(wrapped);
-      let id = bucket.byContents.get(key);
+    if (group.byContents !== null) {
+      const key = hashRow(bytes);
+      let id = group.byContents.get(key);
       if (id === undefined) {
         id = nextId;
         nextId += 1;
-        bucket.byContents.set(key, id);
+        group.byContents.set(key, id);
       }
       return id;
     }
 
-    for (const candidate of bucket.candidates) {
-      if (wrappedEqual(candidate.wrapped, wrapped)) return candidate.id;
+    for (const candidate of group.candidates) {
+      if (rowsEqual(candidate.bytes, bytes)) return candidate.id;
     }
 
     const id = nextId;
     nextId += 1;
 
-    if (bucket.candidates.length >= MAX_CANDIDATES) {
-      bucket.byContents = new Map(
-        bucket.candidates.map(candidate => [
-          wrappedToString(candidate.wrapped),
-          candidate.id,
-        ]),
+    if (group.candidates.length >= MAX_CANDIDATES) {
+      group.byContents = new Map(
+        group.candidates.map(candidate => [hashRow(candidate.bytes), candidate.id]),
       );
-      bucket.byContents.set(wrappedToString(wrapped), id);
-      bucket.candidates = [];
+      group.byContents.set(hashRow(bytes), id);
+      group.candidates = [];
       return id;
     }
 
-    bucket.candidates.push({ wrapped, id });
+    group.candidates.push({ bytes, id });
     return id;
   };
 }
