@@ -2,4 +2,6 @@
 .claude/settings.local.json
 .claude/worktrees/
 .env
+dist
 node_modules
+*.tsbuildinfo

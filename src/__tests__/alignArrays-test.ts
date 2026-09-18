@@ -1,6 +1,13 @@
+import { describe, expect, it } from '@jest/globals';
+
 import alignArrays from '../alignArrays.js';
 
-function test(aStr, bStr, expectedAStr, expectedBStr) {
+function test(
+  aStr: string,
+  bStr: string,
+  expectedAStr: string,
+  expectedBStr: string,
+): void {
   const a = aStr.split('');
   const b = bStr.split('');
   alignArrays(a, b);

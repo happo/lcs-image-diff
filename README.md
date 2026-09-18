@@ -21,6 +21,9 @@ Image 1 | Image 2 | Image diff | Traced
 npm install lcs-image-diff
 ```
 
+The package is written in TypeScript and ships its own type declarations, so
+there is no `@types/lcs-image-diff` to install.
+
 ## Usage in the browser
 
 _Pro tip:_ You're best off using this module in a web worker, to offload heavy

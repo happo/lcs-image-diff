@@ -1,8 +1,10 @@
+import { beforeEach, describe, expect, it } from '@jest/globals';
+
 import similarEnough from '../similarEnough.js';
 
-let subject;
-let image1Data;
-let image2Data;
+let subject: () => boolean;
+let image1Data: number[][];
+let image2Data: number[][];
 
 const BLACK = [0, 0, 0, 255];
 const WHITE = [255, 255, 255, 255];

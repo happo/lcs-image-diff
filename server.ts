@@ -9,21 +9,13 @@ import path from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PORT = process.env.PORT || 3456;
+const PORT = Number(process.env.PORT) || 3456;
 const SNAPSHOTS_DIR = join(__dirname, 'snapshots');
 
-const MIME_TYPES = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.png': 'image/png',
-  '.json': 'application/json',
-};
-
-function getSnapshots() {
+function getSnapshots(): string[] {
   return fs
     .readdirSync(SNAPSHOTS_DIR)
-    .filter((name) => {
+    .filter((name: string) => {
       const dir = path.join(SNAPSHOTS_DIR, name);
       return (
         fs.statSync(dir).isDirectory() &&
@@ -231,7 +223,7 @@ const HTML = `<!DOCTYPE html>
 `;
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url, `http://localhost:${PORT}`);
+  const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
   const pathname = url.pathname;
 
   // API: list snapshots

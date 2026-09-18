@@ -9,17 +9,18 @@ import path from 'path';
 import sharp from 'sharp';
 
 import imageDiff from './src/index.js';
+import type { ImageInput } from './src/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const RUNS_PER_SNAPSHOT = 3;
 
-function hashFunction(data) {
+function hashFunction(data: Uint8ClampedArray): string {
   return crypto.createHash('md5').update(data).digest('hex');
 }
 
-async function loadImage(filePath) {
+async function loadImage(filePath: string): Promise<ImageInput> {
   const s = sharp(filePath);
   const [metadata, buffer] = await Promise.all([
     s.metadata(),
@@ -28,11 +29,18 @@ async function loadImage(filePath) {
   return { data: buffer, width: metadata.width, height: metadata.height };
 }
 
-function formatMs(ms) {
+function formatMs(ms: number): string {
   return `${ms.toFixed(1)}ms`;
 }
 
-function stats(times) {
+interface Stats {
+  mean: number;
+  min: number;
+  max: number;
+  median: number;
+}
+
+function stats(times: number[]): Stats {
   const sorted = [...times].sort((a, b) => a - b);
   const mean = times.reduce((a, b) => a + b, 0) / times.length;
   const min = sorted[0];
@@ -41,7 +49,12 @@ function stats(times) {
   return { mean, min, max, median };
 }
 
-async function main() {
+interface Result extends Stats {
+  snapshot: string;
+  sizeLabel: string;
+}
+
+async function main(): Promise<void> {
   const snapshotsDir = path.resolve(__dirname, 'snapshots');
   const snapshots = fs
     .readdirSync(snapshotsDir)
@@ -54,7 +67,7 @@ async function main() {
   );
   console.log('-'.repeat(105));
 
-  const allResults = [];
+  const allResults: Result[] = [];
 
   for (const snapshot of snapshots) {
     const beforePath = path.join(snapshotsDir, snapshot, 'before.png');
@@ -72,7 +85,7 @@ async function main() {
 
     const sizeLabel = `${image1.width}x${image1.height} / ${image2.width}x${image2.height}`;
 
-    const times = [];
+    const times: number[] = [];
     for (let i = 0; i < RUNS_PER_SNAPSHOT; i++) {
       const t0 = performance.now();
       imageDiff(image1, image2, { hashFunction });

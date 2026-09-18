@@ -1,14 +1,15 @@
-import { jest } from '@jest/globals';
 import crypto from 'crypto';
+import type { BinaryLike } from 'crypto';
 import childProcess from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+import { describe, expect, it, jest } from '@jest/globals';
 import sharp from 'sharp';
 
 import imageDiff from '../index.js';
 
-function hashFunction(data) {
+function hashFunction(data: BinaryLike): string {
   return crypto.createHash('md5').update(data).digest('hex');
 }
 

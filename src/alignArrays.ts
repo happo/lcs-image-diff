@@ -1,5 +1,12 @@
 const PLACEHOLDER = '+';
 
+/**
+ * What a row is keyed by while it is being aligned. Keys are compared with
+ * `===`, so an object is only ever equal to itself -- which is how rows that
+ * may not anchor the alignment are marked.
+ */
+export type RowKey = string | number | object;
+
 // Movement direction constants stored in the solution band
 const NONE = 0;
 const UP_LEFT = 1;
@@ -9,12 +16,9 @@ const LEFT = 3;
 /**
  * Constructs an array of placeholder strings, e.g.
  * ['+', '+', '+'].
- *
- * @param {number} count
- * @return Array<String>
  */
-function placeholders(count) {
-  return new Array(count).fill(PLACEHOLDER);
+function placeholders(count: number): string[] {
+  return new Array<string>(count).fill(PLACEHOLDER);
 }
 
 /**
@@ -33,11 +37,8 @@ function placeholders(count) {
  *   bandWidth = usedDriftRange + 4  (covers the range above with room to spare)
  *   colOff(i) = max(0, i - halfDrift - 1)
  *   index(i, j) = i * bandWidth + j - colOff(i)
- *
- * @param {Array} a
- * @param {Array} b
  */
-function alignArrays(a, b) {
+function alignArrays(a: RowKey[], b: RowKey[]): void {
   const aLength = a.length;
   const bLength = b.length;
 
@@ -83,7 +84,7 @@ function alignArrays(a, b) {
   // Backtrack through the solution band to inject PLACEHOLDER gaps.
   // Out-of-band reads must return NONE (0), matching the original full-matrix
   // behaviour where unwritten cells default to zero.
-  function getMovement(i, j) {
+  function getMovement(i: number, j: number): number {
     const co = Math.max(0, i - halfDrift - 1);
     const bandIdx = j - co;
     if (bandIdx < 0 || bandIdx >= bandWidth) return NONE;

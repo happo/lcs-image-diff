@@ -1,23 +1,38 @@
 import imagetracer from 'imagetracerjs';
 
+import type { Rgba } from './compose.js';
 import { DIFF_TRACE_PADDING } from './constants.js';
 
 const { imagedataToSVG } = imagetracer;
 
 const BLEED = 1;
 
-function getDataIndex(row, width, index) {
+function getDataIndex(row: number, width: number, index: number): number {
   return (width * row) + index;
 }
 
 export default class DiffTrace {
-  constructor({ width, height }) {
+  readonly width: number;
+
+  readonly height: number;
+
+  readonly data: Uint8ClampedArray;
+
+  constructor({ width, height }: { width: number; height: number }) {
     this.width = width + (DIFF_TRACE_PADDING * 2 * 4);
     this.height = height + (DIFF_TRACE_PADDING * 2);
     this.data = new Uint8ClampedArray(this.width * this.height);
   }
 
-  diff({ row, index, color }) {
+  diff({
+    row,
+    index,
+    color,
+  }: {
+    row: number;
+    index: number;
+    color: Rgba;
+  }): void {
     const dRow = row + DIFF_TRACE_PADDING;
     const dIndex = index + (DIFF_TRACE_PADDING * 4);
     for (
@@ -31,17 +46,15 @@ export default class DiffTrace {
         di += 4
       ) {
         const diffIndex = getDataIndex(dr, this.width, di);
-        /* eslint-disable prefer-destructuring */
         this.data[diffIndex + 0] = color[0]; // r
         this.data[diffIndex + 1] = color[1]; // g
         this.data[diffIndex + 2] = color[2]; // b
         this.data[diffIndex + 3] = color[3]; // a
-        /* eslint-enable prefer-destructuring */
       }
     }
   }
 
-  toSVG() {
+  toSVG(): string {
     return imagedataToSVG({
       data: this.data,
       height: this.height,

@@ -1,14 +1,30 @@
-import getDiffPixel from './getDiffPixel.js';
+import type { Rgba } from './compose.js';
 import DiffTrace from './DiffTrace.js';
+import getDiffPixel from './getDiffPixel.js';
 
-const GREEN = [106, 133, 0, 255];
-const MAGENTA = [197, 39, 114, 255];
+const GREEN: Rgba = [106, 133, 0, 255];
+const MAGENTA: Rgba = [197, 39, 114, 255];
 
-function getDataIndex(row, width, index) {
+function getDataIndex(row: number, width: number, index: number): number {
   return width * row + index;
 }
 
-export default function createDiffImage({ image1Data, image2Data }) {
+export interface DiffImage {
+  diff: number;
+  maxDiff: number;
+  trace: DiffTrace;
+  data: Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+
+export default function createDiffImage({
+  image1Data,
+  image2Data,
+}: {
+  image1Data: Uint8ClampedArray[];
+  image2Data: Uint8ClampedArray[];
+}): DiffImage {
   // Images have the same width and height here
   const width = image1Data[0].length;
   const height = image1Data.length;
@@ -37,7 +53,6 @@ export default function createDiffImage({ image1Data, image2Data }) {
         maxDiff = diff;
       }
 
-      /* eslint-disable prefer-destructuring */
       if (diff > 0) {
         let diffColor = MAGENTA;
         if (image1Data[row][3] === 0 && image1Data[row][0] === 1) {
@@ -54,7 +69,6 @@ export default function createDiffImage({ image1Data, image2Data }) {
       data[dataIndex + 1] = pixel[1]; // g
       data[dataIndex + 2] = pixel[2]; // b
       data[dataIndex + 3] = pixel[3]; // a
-      /* eslint-enable prefer-destructuring */
     }
   }
 

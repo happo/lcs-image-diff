@@ -2,6 +2,8 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
 import crypto from 'crypto';
+
+import { beforeEach, describe, expect, it } from '@jest/globals';
 import sharp from 'sharp';
 
 import computeAndInjectDiffs, {
@@ -10,19 +12,25 @@ import computeAndInjectDiffs, {
   hashRowWithCharCodes,
   rowsEqualInJavaScript,
 } from '../computeAndInjectDiffs.js';
+import type {
+  ComputeAndInjectDiffsResult,
+  HashFunction,
+  ImageInput,
+  InternerOptions,
+} from '../computeAndInjectDiffs.js';
 import compose from '../compose.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-function createHash(data) {
+function createHash(data: Uint8ClampedArray): string {
   return crypto.createHash('md5').update(data).digest('hex');
 }
 
-let image1;
-let image2;
-let hashFunction;
-let subject;
+let image1: ImageInput;
+let image2: ImageInput;
+let hashFunction: HashFunction | undefined;
+let subject: () => ComputeAndInjectDiffsResult;
 
 beforeEach(async () => {
   const image1Sharp = sharp(
@@ -74,7 +82,11 @@ it('can take a custom hashFunction', async () => {
 
 describe('injected rows', () => {
   // A solid image of `height` rows, with `bandRow` painted `bandColor`.
-  function solidImage(height, bandRow, bandColor) {
+  function solidImage(
+    height: number,
+    bandRow: number,
+    bandColor: number[],
+  ): ImageInput {
     const width = 20;
     const data = Buffer.alloc(width * height * 4);
     for (let y = 0; y < height; y++) {
@@ -93,37 +105,46 @@ describe('injected rows', () => {
 
   // What an injected line is filled with for a white image.
   const injectedColor = [
-    ...compose([200, 200, 200, 50], new Uint8ClampedArray([255, 255, 255, 255]))
-      .slice(0, 3),
+    ...[
+      ...compose(
+        [200, 200, 200, 50],
+        new Uint8ClampedArray([255, 255, 255, 255]),
+      ),
+    ].slice(0, 3),
     122,
   ];
 
   // Whichever image is shorter is the one that gets rows, so each set is
   // filled by its own branch and each needs its own case.
-  it.each([
+  const shorterImageCases: [string, number, number][] = [
     ['image1 is shorter', 20, 26],
     ['image2 is shorter', 26, 20],
-  ])('reports which rows it added when %s', async (_name, height1, height2) => {
-    const { image1Data, image2Data, image1InjectedRows, image2InjectedRows } =
-      computeAndInjectDiffs({
-        image1: solidImage(height1, 4, [200, 30, 30, 255]),
-        image2: solidImage(height2, 4, [200, 30, 30, 255]),
-      });
+  ];
 
-    expect(image1InjectedRows.size).toBe(image1Data.length - height1);
-    expect(image2InjectedRows.size).toBe(image2Data.length - height2);
+  it.each(shorterImageCases)(
+    'reports which rows it added when %s',
+    async (_name, height1, height2) => {
+      const { image1Data, image2Data, image1InjectedRows, image2InjectedRows } =
+        computeAndInjectDiffs({
+          image1: solidImage(height1, 4, [200, 30, 30, 255]),
+          image2: solidImage(height2, 4, [200, 30, 30, 255]),
+        });
 
-    // Only the shorter one needed any.
-    expect(Math.min(image1InjectedRows.size, image2InjectedRows.size)).toBe(0);
-    expect(Math.max(image1InjectedRows.size, image2InjectedRows.size)).toBe(6);
+      expect(image1InjectedRows.size).toBe(image1Data.length - height1);
+      expect(image2InjectedRows.size).toBe(image2Data.length - height2);
 
-    for (const y of image1InjectedRows) {
-      expect([...image1Data[y].slice(0, 4)]).toEqual(injectedColor);
-    }
-    for (const y of image2InjectedRows) {
-      expect([...image2Data[y].slice(0, 4)]).toEqual(injectedColor);
-    }
-  });
+      // Only the shorter one needed any.
+      expect(Math.min(image1InjectedRows.size, image2InjectedRows.size)).toBe(0);
+      expect(Math.max(image1InjectedRows.size, image2InjectedRows.size)).toBe(6);
+
+      for (const y of image1InjectedRows) {
+        expect([...image1Data[y].slice(0, 4)]).toEqual(injectedColor);
+      }
+      for (const y of image2InjectedRows) {
+        expect([...image2Data[y].slice(0, 4)]).toEqual(injectedColor);
+      }
+    },
+  );
 
   it('reports nothing when the images are not aligned', async () => {
     const image = solidImage(20, 4, [200, 30, 30, 255]);
@@ -159,7 +180,7 @@ describe('row hashing', () => {
   // Jest runs under Node, so the module always picks the Buffer
   // implementation. The other one ships to browsers, so it is tested directly
   // and against its counterpart.
-  const both = [
+  const both: [string, (row: Uint8ClampedArray) => string][] = [
     ['Buffer', hashRowWithBuffer],
     ['fromCharCode', hashRowWithCharCodes],
   ];
@@ -211,7 +232,7 @@ describe('row hashing', () => {
     // excluded and row 10 of image1 is given the marker. The marker-spelling
     // row occurs once in each image, so it keeps its real hash -- which is
     // that same string, and the two used to be matched to each other.
-    const image = (height, markerRow) => {
+    const image = (height: number, markerRow: number): ImageInput => {
       const data = Buffer.alloc(height * 4);
       for (let y = 0; y < height; y++) {
         data.set(y === markerRow ? marker : white, y * 4);
@@ -219,11 +240,11 @@ describe('row hashing', () => {
       return { data, width: 1, height };
     };
 
-    const align = hashFunction => {
+    const align = (hashFn?: HashFunction): string => {
       const { image1Data, image2Data } = computeAndInjectDiffs({
         image1: image(30, 25),
         image2: image(34, 5),
-        ...(hashFunction ? { hashFunction } : {}),
+        ...(hashFn ? { hashFunction: hashFn } : {}),
       });
       return [image1Data, image2Data]
         .map(rows => rows.map(row => [...row].join(',')).join('|'))
@@ -239,7 +260,10 @@ describe('row hashing', () => {
 describe('row interning', () => {
   // The default keys rows by identity rather than by their bytes. The result
   // has to be what an exact, collision-free hash produces.
-  const image = (height, paint) => {
+  const image = (
+    height: number,
+    paint: (y: number, x: number) => number[],
+  ): ImageInput => {
     const width = 8;
     const data = Buffer.alloc(width * height * 4);
     for (let y = 0; y < height; y++) {
@@ -255,12 +279,15 @@ describe('row interning', () => {
     return { data, width, height };
   };
 
-  const rowsOf = result =>
+  const rowsOf = (result: ComputeAndInjectDiffsResult): string =>
     result.image1Data.map(row => [...row].join(',')).join('|') +
     '//' +
     result.image2Data.map(row => [...row].join(',')).join('|');
 
-  const bothWays = (image1, image2) => {
+  const bothWays = (
+    image1: ImageInput,
+    image2: ImageInput,
+  ): [string, string] => {
     const interned = computeAndInjectDiffs({ image1, image2 });
     const exact = computeAndInjectDiffs({
       image1,
@@ -282,7 +309,7 @@ describe('row interning', () => {
   it('aligns the same when rows differ only where the sampler never looks', () => {
     // Every row distinct, differing in one byte the stride skips, so they all
     // land in one group and the fallback that bounds it takes over.
-    const paint = offset => (y, x) =>
+    const paint = (offset: number) => (y: number, x: number) =>
       x === 1 ? [(y + offset) & 0xff, 0, 0, 255] : [255, 255, 255, 255];
 
     const [interned, exact] = bothWays(image(40, paint(0)), image(46, paint(3)));
@@ -302,13 +329,16 @@ describe('row interning', () => {
     // Buffer hash. Browsers get the other two, and nothing reached them
     // through a real alignment. Driving them through `computeAndInjectDiffs`
     // covers interning and its fallback the way a browser would run them.
-    const inBrowser = () =>
+    const inBrowser = (): HashFunction =>
       createInterner({
         rowsEqual: rowsEqualInJavaScript,
         hashRow: hashRowWithCharCodes,
       });
 
-    const comparedBothWays = (image1, image2) => [
+    const comparedBothWays = (
+      image1: ImageInput,
+      image2: ImageInput,
+    ): [string, string] => [
       rowsOf(computeAndInjectDiffs({ image1, image2, hashFunction: inBrowser() })),
       rowsOf(
         computeAndInjectDiffs({
@@ -329,7 +359,7 @@ describe('row interning', () => {
     });
 
     it('aligns the same when the fallback takes over', () => {
-      const paint = offset => (y, x) =>
+      const paint = (offset: number) => (y: number, x: number) =>
         x === 1 ? [(y + offset) & 0xff, 0, 0, 255] : [255, 255, 255, 255];
 
       const [browser, exact] = comparedBothWays(
@@ -343,28 +373,36 @@ describe('row interning', () => {
 
   // Rows that differ only in their very last byte. A comparison that stops
   // early, or a fingerprint trusted on its own, reads these as one row.
-  it.each([
+  const internerCases: [string, InternerOptions | undefined][] = [
     ['in Node', undefined],
-    ['without Node', { rowsEqual: rowsEqualInJavaScript, hashRow: hashRowWithCharCodes }],
-  ])('tells rows apart that differ only in the last byte, %s', (_name, options) => {
-    const paint = offset => (y, x) =>
-      x === 7 ? [255, 255, 255, (y + offset) & 0xff] : [255, 255, 255, 255];
+    [
+      'without Node',
+      { rowsEqual: rowsEqualInJavaScript, hashRow: hashRowWithCharCodes },
+    ],
+  ];
 
-    const interned = rowsOf(
-      computeAndInjectDiffs({
-        image1: image(30, paint(0)),
-        image2: image(36, paint(5)),
-        hashFunction: createInterner(options),
-      }),
-    );
-    const exact = rowsOf(
-      computeAndInjectDiffs({
-        image1: image(30, paint(0)),
-        image2: image(36, paint(5)),
-        hashFunction: hashRowWithBuffer,
-      }),
-    );
+  it.each(internerCases)(
+    'tells rows apart that differ only in the last byte, %s',
+    (_name, options) => {
+      const paint = (offset: number) => (y: number, x: number) =>
+        x === 7 ? [255, 255, 255, (y + offset) & 0xff] : [255, 255, 255, 255];
 
-    expect(interned).toBe(exact);
-  });
+      const interned = rowsOf(
+        computeAndInjectDiffs({
+          image1: image(30, paint(0)),
+          image2: image(36, paint(5)),
+          hashFunction: createInterner(options),
+        }),
+      );
+      const exact = rowsOf(
+        computeAndInjectDiffs({
+          image1: image(30, paint(0)),
+          image2: image(36, paint(5)),
+          hashFunction: hashRowWithBuffer,
+        }),
+      );
+
+      expect(interned).toBe(exact);
+    },
+  );
 });

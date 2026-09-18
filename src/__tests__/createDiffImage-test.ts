@@ -1,17 +1,21 @@
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
+
+import { beforeEach, describe, expect, it } from '@jest/globals';
 import sharp from 'sharp';
 
 import computeAndInjectDiffs from '../computeAndInjectDiffs.js';
+import type { ImageInput } from '../computeAndInjectDiffs.js';
 import createDiffImage from '../createDiffImage.js';
+import type { DiffImage } from '../createDiffImage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-let image1;
-let image2;
-let subject;
+let image1: ImageInput;
+let image2: ImageInput;
+let subject: () => DiffImage;
 
 beforeEach(async () => {
   const image1Sharp = sharp(

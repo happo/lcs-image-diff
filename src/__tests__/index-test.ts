@@ -1,17 +1,20 @@
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
+
+import { beforeEach, expect, it } from '@jest/globals';
 import sharp from 'sharp';
 
 import imageDiff from '../index.js';
+import type { HashFunction, ImageDiffResult, ImageInput } from '../index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-let image1;
-let image2;
-let hashFunction;
-let subject;
+let image1: ImageInput;
+let image2: ImageInput;
+let hashFunction: HashFunction | undefined;
+let subject: () => ImageDiffResult;
 
 beforeEach(async () => {
   hashFunction = undefined;
@@ -42,7 +45,7 @@ beforeEach(async () => {
     width: image2Metadata.width,
     height: image2Metadata.height,
   };
-  subject = () => imageDiff(image1, image2, hashFunction);
+  subject = () => imageDiff(image1, image2, { hashFunction });
 });
 
 it('generates a diff image', () => {

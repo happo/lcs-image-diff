@@ -1,0 +1,32 @@
+name: Setup Environment
+description: 'Sets up pnpm and Node, then installs dependencies.'
+
+inputs:
+  node-version:
+    description: 'Node.js version to use. Defaults to the one in mise.toml.'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    # pnpm has to be on PATH before setup-node, which shells out to it to
+    # locate the store it caches.
+    - name: Setup pnpm
+      uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      with:
+        version: 11
+        run_install: false
+
+    # Exactly one of these two is ever set: setup-node ignores an empty
+    # version file, and passing both would make it ignore the file anyway.
+    - name: Setup Node
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        node-version-file: ${{ inputs.node-version == '' && 'mise.toml' || '' }}
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      shell: bash

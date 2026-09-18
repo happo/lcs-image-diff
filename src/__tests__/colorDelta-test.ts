@@ -1,3 +1,5 @@
+import { describe, expect, it } from '@jest/globals';
+
 import colorDelta, { colorDeltaChannels } from '../colorDelta.js';
 
 describe('colorDelta', () => {

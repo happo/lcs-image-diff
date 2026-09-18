@@ -1,8 +1,11 @@
-import compose from '../compose.js';
+import { beforeEach, describe, expect, it } from '@jest/globals';
 
-let subject;
-let foreground;
-let background;
+import compose from '../compose.js';
+import type { ColorLike } from '../compose.js';
+
+let subject: () => ColorLike;
+let foreground: number[];
+let background: number[];
 
 beforeEach(() => {
   foreground = [100, 100, 100, 100];
