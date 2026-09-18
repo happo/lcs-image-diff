@@ -1,6 +1,6 @@
-import type { Rgba } from './compose.js';
-import DiffTrace from './DiffTrace.js';
-import getDiffPixel from './getDiffPixel.js';
+import type { Rgba } from './compose.ts';
+import DiffTrace from './DiffTrace.ts';
+import getDiffPixel from './getDiffPixel.ts';
 
 const GREEN: Rgba = [106, 133, 0, 255];
 const MAGENTA: Rgba = [197, 39, 114, 255];

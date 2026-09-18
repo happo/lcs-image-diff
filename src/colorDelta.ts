@@ -1,4 +1,4 @@
-import type { ColorLike } from './compose.js';
+import type { ColorLike } from './compose.ts';
 
 const MAX_YIQ_DIFFERENCE = 35215;
 

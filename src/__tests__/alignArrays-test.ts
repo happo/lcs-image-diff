@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import alignArrays from '../alignArrays.js';
+import alignArrays from '../alignArrays.ts';
 
 function test(
   aStr: string,

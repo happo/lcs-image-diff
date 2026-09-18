@@ -1,6 +1,6 @@
-import compose from './compose.js';
-import type { ColorLike, Rgba } from './compose.js';
-import { colorDeltaChannels } from './colorDelta.js';
+import compose from './compose.ts';
+import type { ColorLike, Rgba } from './compose.ts';
+import { colorDeltaChannels } from './colorDelta.ts';
 
 const TRANSPARENT: Rgba = [0, 0, 0, 0];
 

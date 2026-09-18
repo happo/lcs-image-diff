@@ -12,8 +12,6 @@ autoInstallPeers: true
 savePrefix: ''
 dedupePeerDependents: true
 allowBuilds:
-  # tsx runs on esbuild, which needs its binary linked at install time.
-  esbuild: true
   sharp: true
 
   # Optional native speedups for jest and its resolver. Both ship prebuilt

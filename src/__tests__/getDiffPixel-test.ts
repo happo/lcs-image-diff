@@ -1,7 +1,7 @@
 import { beforeEach, expect, it } from '@jest/globals';
 
-import getDiffPixel from '../getDiffPixel.js';
-import type { DiffPixel } from '../getDiffPixel.js';
+import getDiffPixel from '../getDiffPixel.ts';
+import type { DiffPixel } from '../getDiffPixel.ts';
 
 let subject: () => DiffPixel;
 let previousPixel: number[];

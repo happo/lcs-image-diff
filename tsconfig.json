@@ -17,6 +17,14 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
+    // Relative imports name the real file (`./foo.ts`), so Node can run the
+    // sources directly. tsc rewrites them to `./foo.js` on emit.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    // Node can only strip types, not transform them -- this rejects syntax
+    // it would choke on (enums, namespaces, parameter properties).
+    "erasableSyntaxOnly": true,
+
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "moduleDetection": "force",

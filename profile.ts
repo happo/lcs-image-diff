@@ -8,8 +8,8 @@ import path from 'path';
 
 import sharp from 'sharp';
 
-import imageDiff from './src/index.js';
-import type { ImageInput } from './src/index.js';
+import imageDiff from './src/index.ts';
+import type { ImageInput } from './src/index.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

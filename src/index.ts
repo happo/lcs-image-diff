@@ -1,13 +1,14 @@
-import { DIFF_TRACE_PADDING } from './constants.js';
-import computeAndInjectDiffs from './computeAndInjectDiffs.js';
-import type { HashFunction, ImageInput } from './computeAndInjectDiffs.js';
-import createDiffImage from './createDiffImage.js';
-import type DiffTrace from './DiffTrace.js';
+import computeAndInjectDiffs from './computeAndInjectDiffs.ts';
+import type { HashFunction, ImageInput } from './computeAndInjectDiffs.ts';
+import createDiffImage from './createDiffImage.ts';
+import type DiffTrace from './DiffTrace.ts';
 
-export type { ColorLike, Rgba } from './compose.js';
-export type { RowKey } from './alignArrays.js';
-export type { HashFunction, ImageInput } from './computeAndInjectDiffs.js';
-export type { default as DiffTrace } from './DiffTrace.js';
+export { DIFF_TRACE_PADDING } from './constants.ts';
+
+export type { ColorLike, Rgba } from './compose.ts';
+export type { RowKey } from './alignArrays.ts';
+export type { HashFunction, ImageInput } from './computeAndInjectDiffs.ts';
+export type { default as DiffTrace } from './DiffTrace.ts';
 
 export interface ImageDiffOptions {
   hashFunction?: HashFunction;
@@ -22,7 +23,7 @@ export interface ImageDiffResult {
   trace: DiffTrace;
 }
 
-function imageDiff(
+export default function imageDiff(
   image1: ImageInput,
   image2: ImageInput,
   { hashFunction }: ImageDiffOptions = {},
@@ -50,7 +51,3 @@ function imageDiff(
     maxDiff: differentDimensions ? 1 : maxDiff,
   };
 }
-
-imageDiff.DIFF_TRACE_PADDING = DIFF_TRACE_PADDING;
-
-export default imageDiff;

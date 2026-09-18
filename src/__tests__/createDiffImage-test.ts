@@ -5,10 +5,10 @@ import path from 'path';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 import sharp from 'sharp';
 
-import computeAndInjectDiffs from '../computeAndInjectDiffs.js';
-import type { ImageInput } from '../computeAndInjectDiffs.js';
-import createDiffImage from '../createDiffImage.js';
-import type { DiffImage } from '../createDiffImage.js';
+import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
+import type { ImageInput } from '../computeAndInjectDiffs.ts';
+import createDiffImage from '../createDiffImage.ts';
+import type { DiffImage } from '../createDiffImage.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

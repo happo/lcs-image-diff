@@ -18,6 +18,8 @@ src/
   constants.ts              # DIFF_TRACE_PADDING
   imagetracerjs.d.ts        # Types for the untyped `imagetracerjs` dependency
   __tests__/                # Jest unit + snapshot tests
+scripts/
+  smoke.ts                  # Imports the BUILT package and exercises it
 dist/                       # Build output (git-ignored); what the package ships
 snapshots/                  # Visual regression baselines (before/after/diff.png)
 static/                     # Test fixture images
@@ -33,6 +35,7 @@ pnpm test <test_file_name>                         # Run a single test file
 pnpm test -t <matching_string> <test_file_name>    # Run a single describe/test block
 pnpm tsc                                           # Type check everything (no emit)
 pnpm run build                                     # Emit dist/ from src/
+pnpm run smoke                                     # Check the built package
 pnpm run serve                                     # Dev server at http://localhost:3456
 pnpm run profile                                   # Time imageDiff over the snapshots
 ```
@@ -41,20 +44,25 @@ pnpm run profile                                   # Time imageDiff over the sna
 
 ESM (`"type": "module"` in package.json), TypeScript 7 with `module: nodenext`.
 
-Relative imports carry a `.js` extension even though the files are `.ts` -- that
-is what `nodenext` resolution wants and what the emitted JS needs. Jest maps the
-extension back off again (`moduleNameMapper` in `jest.config.js`).
+Relative imports name the real file: `./foo.ts`, not `./foo.js`. That is what
+lets Node run the sources directly -- its type stripping will not resolve a
+`.js` specifier to a `.ts` file. `rewriteRelativeImportExtensions` turns them
+into `./foo.js` on emit, so `dist/` is ordinary JavaScript. `erasableSyntaxOnly`
+keeps the source to syntax Node can strip, which rules out enums, namespaces
+and parameter properties.
+
+Because of that there is no toolchain for running a script: `node server.ts`
+and `node profile.ts` work as they are.
 
 `tsconfig.json` type checks everything and emits nothing;
-`tsconfig.build.json` is the one that writes `dist/`.
+`tsconfig.build.json` is the one that writes `dist/`; `tsconfig.smoke.json`
+checks `scripts/smoke.ts` against the built package and so only works after a
+build, which is why it is kept out of `pnpm tsc`.
 
 Tests run through `babel-jest`, which only strips the types -- jest loads the
 result as ESM, so `NODE_OPTIONS=--experimental-vm-modules` is still needed (set
 automatically via the `test` script). Babel does not type check; `pnpm tsc`
 does.
-
-`server.ts` and `profile.ts` run under `tsx`, because Node's own type stripping
-will not resolve a `.js` specifier to a `.ts` file.
 
 ## Key Algorithms
 
@@ -97,13 +105,26 @@ const withOwnHash = imageDiff(bitmap1, bitmap2, { hashFunction });
 
 Return value: `{ data: Uint8ClampedArray, width, height, diff: number (0–1), trace: DiffTrace }`.
 
+`DIFF_TRACE_PADDING` is a named export (it used to hang off the `imageDiff`
+function).
+
+Individual modules are reachable too, and `scripts/smoke.ts` covers these so
+they cannot break silently:
+
+```js
+import computeAndInjectDiffs from 'lcs-image-diff/computeAndInjectDiffs.js';
+
+// The `src/` prefix predates this package having an `exports` field. Callers
+// elsewhere still use it, so it stays mapped to the same module.
+import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
+```
+
 ## Dependencies
 
 - `imagetracerjs` — raster-to-SVG for `DiffTrace` (untyped; see `src/imagetracerjs.d.ts`)
 - `typescript` (dev) — v7, the native compiler
 - `sharp` (dev) — PNG loading in tests
 - `jest` (dev) — test runner, with `babel-jest` + `@babel/preset-typescript`
-- `tsx` (dev) — runs `server.ts` and `profile.ts`
 
 Dependency versions are subject to the `minimumReleaseAge` cooldown in
 `pnpm-workspace.yaml`, so a range whose only match is a package published in the

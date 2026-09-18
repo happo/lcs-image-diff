@@ -19,11 +19,6 @@ export default {
     ],
   },
 
-  // TypeScript resolves `./foo.js` to `foo.ts` and emits the `.js` specifier.
-  // Jest resolves the specifier literally, so it needs the extension dropped.
-  moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
-  },
 
   testMatch: ['**/__tests__/**/*-test.ts'],
 };

@@ -1,7 +1,7 @@
 import imagetracer from 'imagetracerjs';
 
-import type { Rgba } from './compose.js';
-import { DIFF_TRACE_PADDING } from './constants.js';
+import type { Rgba } from './compose.ts';
+import { DIFF_TRACE_PADDING } from './constants.ts';
 
 const { imagedataToSVG } = imagetracer;
 

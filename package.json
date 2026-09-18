@@ -9,7 +9,16 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./src/*.js": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -28,13 +37,13 @@
   "packageManager": "pnpm",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "smoke": "tsc -p tsconfig.smoke.json && tsx scripts/smoke.ts",
+    "smoke": "tsc -p tsconfig.smoke.json && node scripts/smoke.ts",
     "prepack": "pnpm run build",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "tsc": "tsc",
     "release": "set -a && source .env && set +a && release-with-ease",
-    "serve": "tsx server.ts",
-    "profile": "tsx profile.ts"
+    "serve": "node server.ts",
+    "profile": "node profile.ts"
   },
   "prettier": {
     "trailingComma": "all",
@@ -56,7 +65,6 @@
     "jest": "^30.5.1",
     "release-with-ease": "2.7.2",
     "sharp": "^0.35.4",
-    "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   }
 }

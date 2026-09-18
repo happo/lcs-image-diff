@@ -1,4 +1,4 @@
-const PLACEHOLDER = '+';
+export const PLACEHOLDER = '+';
 
 /**
  * What a row is keyed by while it is being aligned. Keys are compared with
@@ -38,7 +38,7 @@ function placeholders(count: number): string[] {
  *   colOff(i) = max(0, i - halfDrift - 1)
  *   index(i, j) = i * bandWidth + j - colOff(i)
  */
-function alignArrays(a: RowKey[], b: RowKey[]): void {
+export default function alignArrays(a: RowKey[], b: RowKey[]): void {
   const aLength = a.length;
   const bLength = b.length;
 
@@ -130,7 +130,3 @@ function alignArrays(a: RowKey[], b: RowKey[]): void {
     }
   }
 }
-
-alignArrays.PLACEHOLDER = PLACEHOLDER;
-
-export default alignArrays;

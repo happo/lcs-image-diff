@@ -7,7 +7,7 @@ import path from 'path';
 import { describe, expect, it, jest } from '@jest/globals';
 import sharp from 'sharp';
 
-import imageDiff from '../index.js';
+import imageDiff from '../index.ts';
 
 function hashFunction(data: BinaryLike): string {
   return crypto.createHash('md5').update(data).digest('hex');

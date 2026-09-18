@@ -12,8 +12,15 @@ import { dirname } from 'path';
 
 import sharp from 'sharp';
 
-import imageDiff from 'lcs-image-diff';
+import imageDiff, { DIFF_TRACE_PADDING } from 'lcs-image-diff';
 import type { ImageInput, ImageDiffResult } from 'lcs-image-diff';
+
+// Deep imports another codebase in this org already relies on. They were
+// reachable before this package had an `exports` field, so the subpath
+// entries have to keep them working.
+import computeAndInjectDiffs from 'lcs-image-diff/src/computeAndInjectDiffs.js';
+import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
+import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -43,8 +50,18 @@ assert.strictEqual(result.maxDiff, 1, 'maxDiff for differently sized images');
 // The trace is the other half of the public surface.
 assert.match(result.trace.toSVG(), /^<svg[^>]*viewBox="0 0 100 100"/, 'trace svg');
 
-// Documented in the README, and only reachable if the expando survived the
-// declaration emit.
-assert.strictEqual(imageDiff.DIFF_TRACE_PADDING, 10, 'DIFF_TRACE_PADDING');
+assert.strictEqual(DIFF_TRACE_PADDING, 10, 'DIFF_TRACE_PADDING named export');
+
+// The deep imports have to resolve to working code, not just resolve.
+const delta = colorDeltaChannels(0, 0, 0, 255, 255, 255, 255, 255);
+assert.ok(delta > 0.92, `colorDeltaChannels via deep import: ${delta}`);
+assert.strictEqual(viaShortPath, colorDeltaChannels, 'both subpaths are one module');
+
+const injected = computeAndInjectDiffs({ image1, image2 });
+assert.strictEqual(
+  injected.image1Data.length,
+  injected.image2Data.length,
+  'computeAndInjectDiffs via deep import evens the heights',
+);
 
 console.log('smoke: package entry point OK');

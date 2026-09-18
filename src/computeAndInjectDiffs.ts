@@ -1,8 +1,8 @@
-import alignArrays from './alignArrays.js';
-import type { RowKey } from './alignArrays.js';
-import compose from './compose.js';
-import type { ColorLike } from './compose.js';
-import similarEnough from './similarEnough.js';
+import alignArrays, { PLACEHOLDER } from './alignArrays.ts';
+import type { RowKey } from './alignArrays.ts';
+import compose from './compose.ts';
+import type { ColorLike } from './compose.ts';
+import similarEnough from './similarEnough.ts';
 
 /** The raw image, as browsers (`ImageData`) and Node bitmaps both supply it. */
 export interface ImageInput {
@@ -53,10 +53,7 @@ export function hashRowWithBuffer(row: Bytes): string {
 export function hashRowWithCharCodes(row: Bytes): string {
   let result = '';
   for (let i = 0; i < row.length; i += CHARS_PER_CALL) {
-    result += String.fromCharCode.apply(
-      null,
-      row.subarray(i, i + CHARS_PER_CALL) as unknown as number[],
-    );
+    result += String.fromCharCode(...row.subarray(i, i + CHARS_PER_CALL));
   }
   return result;
 }
@@ -249,19 +246,34 @@ const SIMPLIFY_THRESHOLD = 40;
 type SegmentType = 'before' | 'after' | 'neutral' | 'match';
 
 /**
- * Where in the original images a row came from. Which of the two is set is
- * decided by the segment's type, so the reconstruction below reads whichever
- * one its branch put there.
+ * Where in the original images a row came from. Which indices a row carries
+ * follows from its segment's type, so each is its own shape and the
+ * reconstruction below can read them without checking.
  */
-interface SegmentRow {
-  i1?: number;
-  i2?: number;
+interface BeforeRow {
+  i2: number;
 }
 
-interface Segment {
-  type: SegmentType;
-  rows: SegmentRow[];
+interface AfterRow {
+  i1: number;
 }
+
+interface MatchRow {
+  i1: number;
+  i2: number;
+}
+
+type NeutralRow = Record<string, never>;
+
+/** A gap block: rows one image has and the other does not. */
+type GapSegment =
+  | { type: 'before'; rows: BeforeRow[] }
+  | { type: 'after'; rows: AfterRow[] };
+
+type Segment =
+  | GapSegment
+  | { type: 'neutral'; rows: NeutralRow[] }
+  | { type: 'match'; rows: MatchRow[] };
 
 /**
  * Builds a segment list from the aligned hash arrays. Each segment describes a
@@ -276,7 +288,7 @@ interface Segment {
  * pixel data to use.
  */
 function buildSegments(unique1: RowKey[], unique2: RowKey[]): Segment[] {
-  const PH: RowKey = alignArrays.PLACEHOLDER;
+  const PH: RowKey = PLACEHOLDER;
   const segments: Segment[] = [];
   let i1 = 0;
   let i2 = 0;
@@ -290,20 +302,30 @@ function buildSegments(unique1: RowKey[], unique2: RowKey[]): Segment[] {
 
   for (let i = 0; i < unique1.length; ) {
     const type = typeOf(unique1[i], unique2[i]);
-    const rows: SegmentRow[] = [];
-    while (i < unique1.length && typeOf(unique1[i], unique2[i]) === type) {
-      if (type === 'before') {
-        rows.push({ i2: i2++ });
-      } else if (type === 'after') {
-        rows.push({ i1: i1++ });
-      } else if (type === 'neutral') {
-        rows.push({});
-      } else {
-        rows.push({ i1: i1++, i2: i2++ });
-      }
-      i++;
+
+    // How long this run is. Counting first lets each branch below fill an
+    // array of its own row shape.
+    const start = i;
+    while (i < unique1.length && typeOf(unique1[i], unique2[i]) === type) i++;
+    const length = i - start;
+
+    if (type === 'before') {
+      const rows: BeforeRow[] = [];
+      for (let n = 0; n < length; n++) rows.push({ i2: i2++ });
+      segments.push({ type, rows });
+    } else if (type === 'after') {
+      const rows: AfterRow[] = [];
+      for (let n = 0; n < length; n++) rows.push({ i1: i1++ });
+      segments.push({ type, rows });
+    } else if (type === 'neutral') {
+      const rows: NeutralRow[] = [];
+      for (let n = 0; n < length; n++) rows.push({});
+      segments.push({ type, rows });
+    } else {
+      const rows: MatchRow[] = [];
+      for (let n = 0; n < length; n++) rows.push({ i1: i1++, i2: i2++ });
+      segments.push({ type, rows });
     }
-    segments.push({ type, rows });
   }
   return segments;
 }
@@ -353,9 +375,17 @@ function simplifySegments(segments: Segment[], threshold: number): void {
       if (sm.type !== 'match' || sm.rows.length > threshold) continue;
 
       // Combine: two same-direction gaps -> merge them, keep match rows after
-      if (s1.type === s3.type && (s1.type === 'before' || s1.type === 'after')) {
+      if (s1.type === 'before' && s3.type === 'before') {
         segments.splice(s, 3,
-          { type: s1.type, rows: [...s1.rows, ...s3.rows] },
+          { type: 'before', rows: [...s1.rows, ...s3.rows] },
+          { type: 'match', rows: sm.rows },
+        );
+        changed = true;
+        break;
+      }
+      if (s1.type === 'after' && s3.type === 'after') {
+        segments.splice(s, 3,
+          { type: 'after', rows: [...s1.rows, ...s3.rows] },
           { type: 'match', rows: sm.rows },
         );
         changed = true;
@@ -412,25 +442,30 @@ function reconstructImages(
   const injected2 = new Set<number>();
 
   for (const seg of segments) {
-    for (const row of seg.rows) {
-      const y = out1.length;
-      if (seg.type === 'before') {
+    if (seg.type === 'before') {
+      for (const row of seg.rows) {
+        injected1.add(out1.length);
         out1.push(transparentLine(image1Bg, maxWidth));
-        injected1.add(y);
-        // `buildSegments` sets `i2` on every row of a 'before' segment.
-        out2.push(image2Data[row.i2!]);
-      } else if (seg.type === 'after') {
-        out1.push(image1Data[row.i1!]);
+        out2.push(image2Data[row.i2]);
+      }
+    } else if (seg.type === 'after') {
+      for (const row of seg.rows) {
+        injected2.add(out1.length);
+        out1.push(image1Data[row.i1]);
         out2.push(transparentLine(image2Bg, maxWidth));
+      }
+    } else if (seg.type === 'neutral') {
+      for (let n = 0; n < seg.rows.length; n++) {
+        const y = out1.length;
+        injected1.add(y);
         injected2.add(y);
-      } else if (seg.type === 'neutral') {
         out1.push(transparentLine(image1Bg, maxWidth));
-        injected1.add(y);
         out2.push(transparentLine(image2Bg, maxWidth));
-        injected2.add(y);
-      } else {
-        out1.push(image1Data[row.i1!]);
-        out2.push(image2Data[row.i2!]);
+      }
+    } else {
+      for (const row of seg.rows) {
+        out1.push(image1Data[row.i1]);
+        out2.push(image2Data[row.i2]);
       }
     }
   }

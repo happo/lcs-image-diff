@@ -5,8 +5,8 @@ import path from 'path';
 import { beforeEach, expect, it } from '@jest/globals';
 import sharp from 'sharp';
 
-import imageDiff from '../index.js';
-import type { HashFunction, ImageDiffResult, ImageInput } from '../index.js';
+import imageDiff from '../index.ts';
+import type { HashFunction, ImageDiffResult, ImageInput } from '../index.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

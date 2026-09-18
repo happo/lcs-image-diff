@@ -104,13 +104,16 @@ container that bleeds out a little to account for the extra size.
 <div id="trace-svg" style="margin: 0 -10px"></div>
 ```
 
-...or if you hate magic numbers, use the constant attached to the `imageDiff` function:
+...or if you hate magic numbers, import the constant:
 
 ```js
-document.getElementById('#trace-svg').style.margin = `0 ${
-  imageDiff.DIFF_TRACE_PADDING
-}px`;
+import { DIFF_TRACE_PADDING } from 'lcs-image-diff';
+
+document.getElementById('#trace-svg').style.margin = `0 ${DIFF_TRACE_PADDING}px`;
 ```
+
+> **Breaking change:** this used to be `imageDiff.DIFF_TRACE_PADDING`, a
+> property hung off the function. It is a named export now.
 
 ## Authors
 

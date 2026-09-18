@@ -11,14 +11,14 @@ import computeAndInjectDiffs, {
   hashRowWithBuffer,
   hashRowWithCharCodes,
   rowsEqualInJavaScript,
-} from '../computeAndInjectDiffs.js';
+} from '../computeAndInjectDiffs.ts';
 import type {
   ComputeAndInjectDiffsResult,
   HashFunction,
   ImageInput,
   InternerOptions,
-} from '../computeAndInjectDiffs.js';
-import compose from '../compose.js';
+} from '../computeAndInjectDiffs.ts';
+import compose from '../compose.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

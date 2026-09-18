@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
 
-import similarEnough from '../similarEnough.js';
+import similarEnough from '../similarEnough.ts';
 
 let subject: () => boolean;
 let image1Data: number[][];
