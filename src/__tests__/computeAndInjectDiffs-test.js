@@ -197,40 +197,39 @@ describe('row hashing', () => {
     }
   });
 
-  it('does not read a row as an alignment sentinel', () => {
-    // Rows that cannot anchor the alignment are marked with a value that must
-    // not be anything a hash can produce. The marker used to be a string, and
-    // a four-byte row spells one exactly, so a one-pixel-wide image could
-    // produce a row equal to it. The bytes below spell the old marker for row
-    // 10; they must align no differently from any other bytes.
-    const image = (height, contentRow, bytes) => {
+  it('does not match a row against an alignment sentinel', () => {
+    // Rows too common to anchor the alignment are marked with a value that
+    // must not be anything a hash can produce. The marker used to be a string,
+    // and at one pixel wide a row is four bytes and spells one exactly: these
+    // bytes are the marker the aligner used for row 10.
+    const marker = [0, 97, 49, 48];
+    const white = [255, 255, 255, 255];
+
+    // White occurs far more than MAX_ROW_OCCURRENCES, so every white row is
+    // excluded and row 10 of image1 is given the marker. The marker-spelling
+    // row occurs once in each image, so it keeps its real hash -- which is
+    // that same string, and the two used to be matched to each other.
+    const image = (height, markerRow) => {
       const data = Buffer.alloc(height * 4);
       for (let y = 0; y < height; y++) {
-        const pos = y * 4;
-        const [r, g, b, a] = y === contentRow ? bytes : [255, 255, 255, 255];
-        data[pos] = r;
-        data[pos + 1] = g;
-        data[pos + 2] = b;
-        data[pos + 3] = a;
+        data.set(y === markerRow ? marker : white, y * 4);
       }
       return { data, width: 1, height };
     };
 
-    // Injected line, white, or the content row -- the shape of the result,
-    // independent of what the content row's bytes happen to be.
-    const shape = bytes =>
-      computeAndInjectDiffs({
-        image1: image(30, 10, bytes),
-        image2: image(34, 12, [10, 20, 30, 255]),
-      })
-        .image1Data.map(row => {
-          if (row[3] === 122) return 'injected';
-          return row[0] === 255 && row[1] === 255 && row[2] === 255
-            ? 'white'
-            : 'content';
-        })
-        .join(' ');
+    const align = hashFunction => {
+      const { image1Data, image2Data } = computeAndInjectDiffs({
+        image1: image(30, 25),
+        image2: image(34, 5),
+        ...(hashFunction ? { hashFunction } : {}),
+      });
+      return [image1Data, image2Data]
+        .map(rows => rows.map(row => [...row].join(',')).join('|'))
+        .join('//');
+    };
 
-    expect(shape([0, 97, 49, 48])).toBe(shape([7, 8, 9, 255]));
+    // md5 cannot produce the marker, so it aligns these correctly. With the
+    // string marker the default aligned them to 29 rows instead of 34.
+    expect(align()).toBe(align(createHash));
   });
 });

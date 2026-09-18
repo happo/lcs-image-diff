@@ -39,7 +39,9 @@ ESM (`"type": "module"` in package.json). Tests require `NODE_OPTIONS=--experime
 
 **LCS alignment** (`alignArrays.js`): Band-limited DP — stores only a diagonal band of the DP table, reducing memory from O(m×n) to O(n × band_width). Direction constants: `UP_LEFT` (match), `UP` (gap in a), `LEFT` (gap in b).
 
-**Frequency-capped row matching** (`computeAndInjectDiffs.js`): Rows appearing >20 times (`MAX_ROW_OCCURRENCES`) in either image are excluded as alignment anchors — prevents blank rows from causing false LCS matches.
+**Frequency-capped row matching** (`computeAndInjectDiffs.js`): Rows appearing >20 times (`MAX_ROW_OCCURRENCES`) in either image are excluded as alignment anchors — prevents blank rows from causing false LCS matches. Excluded rows are marked with an object rather than a string, so no row hash can collide with the marker.
+
+**Row hashing** (`computeAndInjectDiffs.js`): Each row is keyed on its own bytes, mapped one byte to one character — `Buffer` in Node, `String.fromCharCode` in browsers. The mapping is injective, so two rows compare equal only if identical.
 
 **Color delta** (`colorDelta.js`): YIQ NTSC color space (from pixelmatch). Weighted: `0.5053×y² + 0.299×i² + 0.1957×q²`, normalized by `MAX_YIQ_DIFFERENCE`. Sign encodes lighter vs darker.
 
@@ -60,10 +62,14 @@ import imageDiff from 'lcs-image-diff';
 const { data, width, height, diff, trace } = imageDiff(image1, image2);
 const svg = trace.toSVG();
 
-// Node.js: pass bitmap objects, provide hashFunction
-import crypto from 'crypto';
-const hashFunction = (data) => crypto.createHash('md5').update(data).digest('hex');
-const result = imageDiff(bitmap1, bitmap2, { hashFunction });
+// Node.js: pass bitmap objects. Same call -- the default row hash works in
+// both, so no hashFunction is needed.
+const result = imageDiff(bitmap1, bitmap2);
+
+// A custom hashFunction is still accepted. The default keeps every byte, so
+// rows compare equal only if identical; a shorter key is a little quicker but
+// a collision aligns two different rows as one.
+const withOwnHash = imageDiff(bitmap1, bitmap2, { hashFunction });
 ```
 
 Return value: `{ data: Uint8ClampedArray, width, height, diff: number (0–1), trace: DiffTrace }`.
