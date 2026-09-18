@@ -4,7 +4,10 @@ import path from 'path';
 import crypto from 'crypto';
 import sharp from 'sharp';
 
-import computeAndInjectDiffs from '../computeAndInjectDiffs.js';
+import computeAndInjectDiffs, {
+  hashRowWithBuffer,
+  hashRowWithCharCodes,
+} from '../computeAndInjectDiffs.js';
 import compose from '../compose.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -147,5 +150,86 @@ describe('injected rows', () => {
 
     // The painted row survives as content rather than being called injected.
     expect(contentRows.length).toBe(1);
+  });
+});
+
+describe('row hashing', () => {
+  // Jest runs under Node, so the module always picks the Buffer
+  // implementation. The other one ships to browsers, so it is tested directly
+  // and against its counterpart.
+  const both = [
+    ['Buffer', hashRowWithBuffer],
+    ['fromCharCode', hashRowWithCharCodes],
+  ];
+
+  it.each(both)('%s keeps every byte value distinct', (_name, hash) => {
+    const row = new Uint8ClampedArray(256);
+    for (let i = 0; i < 256; i++) row[i] = i;
+
+    const hashed = hash(row);
+    expect(hashed).toHaveLength(256);
+    expect(new Set(hashed).size).toBe(256);
+  });
+
+  it.each(both)('%s distinguishes rows differing in one byte', (_name, hash) => {
+    const a = new Uint8ClampedArray(64).fill(7);
+    const b = new Uint8ClampedArray(64).fill(7);
+    b[63] = 8;
+
+    expect(hash(a)).not.toBe(hash(b));
+    expect(hash(a)).toBe(hash(a.slice()));
+  });
+
+  it('agrees across a row longer than one fromCharCode call', () => {
+    // The browser implementation walks the row 8192 bytes at a time.
+    const row = new Uint8ClampedArray(20000);
+    for (let i = 0; i < row.length; i++) row[i] = (i * 31) % 256;
+
+    expect(hashRowWithCharCodes(row)).toBe(hashRowWithBuffer(row));
+  });
+
+  it('agrees on rows of every length around the slice boundary', () => {
+    for (const length of [0, 1, 8191, 8192, 8193, 16384, 16385]) {
+      const row = new Uint8ClampedArray(length);
+      for (let i = 0; i < length; i++) row[i] = (i * 17 + 3) % 256;
+
+      expect(hashRowWithCharCodes(row)).toBe(hashRowWithBuffer(row));
+    }
+  });
+
+  it('does not match a row against an alignment sentinel', () => {
+    // Rows too common to anchor the alignment are marked with a value that
+    // must not be anything a hash can produce. The marker used to be a string,
+    // and at one pixel wide a row is four bytes and spells one exactly: these
+    // bytes are the marker the aligner used for row 10.
+    const marker = [0, 97, 49, 48];
+    const white = [255, 255, 255, 255];
+
+    // White occurs far more than MAX_ROW_OCCURRENCES, so every white row is
+    // excluded and row 10 of image1 is given the marker. The marker-spelling
+    // row occurs once in each image, so it keeps its real hash -- which is
+    // that same string, and the two used to be matched to each other.
+    const image = (height, markerRow) => {
+      const data = Buffer.alloc(height * 4);
+      for (let y = 0; y < height; y++) {
+        data.set(y === markerRow ? marker : white, y * 4);
+      }
+      return { data, width: 1, height };
+    };
+
+    const align = hashFunction => {
+      const { image1Data, image2Data } = computeAndInjectDiffs({
+        image1: image(30, 25),
+        image2: image(34, 5),
+        ...(hashFunction ? { hashFunction } : {}),
+      });
+      return [image1Data, image2Data]
+        .map(rows => rows.map(row => [...row].join(',')).join('|'))
+        .join('//');
+    };
+
+    // md5 cannot produce the marker, so it aligns these correctly. With the
+    // string marker the default aligned them to 29 rows instead of 34.
+    expect(align()).toBe(align(createHash));
   });
 });

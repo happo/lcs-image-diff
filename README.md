@@ -41,29 +41,34 @@ const { data, width, height, diff } = imageDiff(image1, image2);
 
 ## Usage in Node
 
-Usage is mostly the same as in the browser, you just have to pass in a custom
-`hashFunction`. Here's an example using images loaded with
-[Jimp](https://github.com/oliver-moran/jimp) and a hash function using the
-[`crypto`](https://nodejs.org/api/crypto.html) module.
+Usage is the same as in the browser. Here's an example using images loaded with
+[Jimp](https://github.com/oliver-moran/jimp).
 
 ```js
-const crypto = require('crypto');
 const Jimp = require('jimp');
 
 const imageDiff = require('lcs-image-diff');
 
-function createHash(data) {
-  return crypto
-    .createHash('md5')
-    .update(data)
-    .digest('hex');
-}
-
 const image1 = (await Jimp.read('1.jpg')).bitmap;
 const image2 = (await Jimp.read('2.jpg')).bitmap;
 
+const { data, width, height, diff } = imageDiff(image1, image2);
+```
+
+### Custom row hashing
+
+Rows are hashed to compare them while aligning the two images. The built-in
+hash keeps every byte, so two rows compare equal only if they are identical.
+You can pass your own `hashFunction` instead — a shorter key makes the
+alignment a little quicker, at the risk of a collision making two different
+rows align as one.
+
+```js
+const crypto = require('crypto');
+
 const { data, width, height, diff } = imageDiff(image1, image2, {
-  hashFunction: createHash,
+  hashFunction: data =>
+    crypto.createHash('md5').update(data).digest('hex'),
 });
 ```
 
