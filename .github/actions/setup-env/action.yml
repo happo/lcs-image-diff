@@ -18,13 +18,32 @@ runs:
         version: 11
         run_install: false
 
-    # Exactly one of these two is ever set: setup-node ignores an empty
-    # version file, and passing both would make it ignore the file anyway.
+    # setup-node can read mise.toml itself, but only on its unreleased main
+    # branch. Every released version falls back to a regex that picks up the
+    # literal `[tools]` and then fails to find a Node build for it, so the
+    # version is read here instead. Keeps mise.toml the one place it lives.
+    - name: Resolve Node version
+      id: node
+      shell: bash
+      env:
+        NODE_VERSION_INPUT: ${{ inputs.node-version }}
+      run: |
+        set -euo pipefail
+        version="$NODE_VERSION_INPUT"
+        if [ -z "$version" ]; then
+          version="$(sed -n 's/^node[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml | head -1)"
+        fi
+        if [ -z "$version" ]; then
+          echo "Could not find a node version in mise.toml" >&2
+          exit 1
+        fi
+        echo "Using Node $version"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
     - name: Setup Node
       uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
       with:
-        node-version: ${{ inputs.node-version }}
-        node-version-file: ${{ inputs.node-version == '' && 'mise.toml' || '' }}
+        node-version: ${{ steps.node.outputs.version }}
         cache: 'pnpm'
 
     - name: Install dependencies
