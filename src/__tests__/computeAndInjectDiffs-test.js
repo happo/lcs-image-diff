@@ -233,3 +233,65 @@ describe('row hashing', () => {
     expect(align()).toBe(align(createHash));
   });
 });
+
+describe('row interning', () => {
+  // The default keys rows by identity rather than by their bytes. The result
+  // has to be what an exact, collision-free hash produces.
+  const image = (height, paint) => {
+    const width = 8;
+    const data = Buffer.alloc(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const pos = (y * width + x) * 4;
+        const [r, g, b, a] = paint(y, x);
+        data[pos] = r;
+        data[pos + 1] = g;
+        data[pos + 2] = b;
+        data[pos + 3] = a;
+      }
+    }
+    return { data, width, height };
+  };
+
+  const rowsOf = result =>
+    result.image1Data.map(row => [...row].join(',')).join('|') +
+    '//' +
+    result.image2Data.map(row => [...row].join(',')).join('|');
+
+  const bothWays = (image1, image2) => {
+    const interned = computeAndInjectDiffs({ image1, image2 });
+    const exact = computeAndInjectDiffs({
+      image1,
+      image2,
+      hashFunction: hashRowWithBuffer,
+    });
+    return [rowsOf(interned), rowsOf(exact)];
+  };
+
+  it('aligns the same as an exact hash', () => {
+    const [interned, exact] = bothWays(
+      image(30, y => (y === 12 ? [10, 20, 30, 255] : [255, 255, 255, 255])),
+      image(36, y => (y === 12 ? [10, 20, 30, 255] : [255, 255, 255, 255])),
+    );
+
+    expect(interned).toBe(exact);
+  });
+
+  it('aligns the same when rows differ only where the sampler never looks', () => {
+    // Every row distinct, differing in one byte the stride skips, so they all
+    // land in one group and the fallback that bounds it takes over.
+    const paint = offset => (y, x) =>
+      x === 1 ? [(y + offset) & 0xff, 0, 0, 255] : [255, 255, 255, 255];
+
+    const [interned, exact] = bothWays(image(40, paint(0)), image(46, paint(3)));
+
+    expect(interned).toBe(exact);
+  });
+
+  it('aligns the same when every row is identical', () => {
+    const white = () => [255, 255, 255, 255];
+    const [interned, exact] = bothWays(image(30, white), image(36, white));
+
+    expect(interned).toBe(exact);
+  });
+});
