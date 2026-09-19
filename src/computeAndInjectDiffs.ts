@@ -26,16 +26,23 @@ function imageTo2DArray(
   const rowSize = width * 4;
   const padSize = paddingRight * 4;
 
-  // Every caller in practice hands over a typed array -- an `ImageData`'s
-  // `data` in the browser, a decoded bitmap in Node -- and a typed array can
-  // give up a row as a view, so copying one becomes a single native `set`
-  // instead of a few thousand element assignments. `ImageInput` still permits
-  // a plain array, which has to be sliced into one first. Which of the two it
-  // is does not change per row, so it is decided once, here.
-  const rowOf: (start: number, end: number) => ArrayLike<number> =
-    typeof (data as Uint8Array).subarray === 'function'
-      ? (start, end) => (data as Uint8Array).subarray(start, end)
-      : (start, end) => Array.prototype.slice.call(data, start, end);
+  // A typed array can hand over a row as a view, so copying one becomes a
+  // single native `set` instead of a few thousand element assignments. That is
+  // what every caller supplies in practice -- an `ImageData`'s `data` in the
+  // browser, a decoded bitmap in Node.
+  //
+  // `ImageInput` still permits a plain array, and the cheapest thing to do with
+  // one is to make it a typed array once rather than slice it per row. It is
+  // already much the more expensive input, since a JS array holds every byte as
+  // a full number, so one more pass over it costs little beside that.
+  //
+  // `Uint8ClampedArray` and not `Uint8Array`, so a value outside 0..255 clamps
+  // the way it did when it was assigned straight into the clamped rows below.
+  // `Uint8Array` would wrap it instead.
+  const pixels =
+    data instanceof Uint8Array || data instanceof Uint8ClampedArray
+      ? data
+      : Uint8ClampedArray.from(data);
 
   const newData: Uint8ClampedArray[] = [];
   for (let row = 0; row < height; row += 1) {
@@ -45,7 +52,7 @@ function imageTo2DArray(
     // A row that runs past the end of `data` copies what is there and leaves
     // the rest zero, which is what assigning `undefined` into a clamped array
     // did before.
-    pixelsInRow.set(rowOf(start, start + rowSize));
+    pixelsInRow.set(pixels.subarray(start, start + rowSize));
 
     // Fills nothing when there is no padding, since the row is already full.
     pixelsInRow.fill(1, rowSize);

@@ -457,4 +457,42 @@ describe('plain array input', () => {
       fromBuffers.image2InjectedRows,
     );
   });
+
+  it('clamps values outside 0..255 rather than wrapping them', () => {
+    // A plain array can hold anything, and it used to reach the rows one
+    // element at a time, where storing it in a `Uint8ClampedArray` clamped it.
+    // Converting the whole input in one go has to clamp too -- `Uint8Array`
+    // would wrap 300 round to 44 instead of holding it at 255.
+    const raw = (height: number): number[] =>
+      Array.from({ length: 4 * height * 4 }, (_, i) =>
+        [300, -5, 1.5, 200][i % 4],
+      );
+
+    // What the old element-at-a-time copy produced, by definition.
+    const clamped = (values: number[]): Uint8ClampedArray => {
+      const out = new Uint8ClampedArray(values.length);
+      for (let i = 0; i < values.length; i++) {
+        out[i] = values[i];
+      }
+      return out;
+    };
+
+    const asIs = (height: number): ImageInput => ({
+      data: raw(height),
+      width: 4,
+      height,
+    });
+    const preClamped = (height: number): ImageInput => ({
+      data: clamped(raw(height)),
+      width: 4,
+      height,
+    });
+
+    expect(
+      computeAndInjectDiffs({ image1: asIs(6), image2: asIs(9) }).image1Data,
+    ).toEqual(
+      computeAndInjectDiffs({ image1: preClamped(6), image2: preClamped(9) })
+        .image1Data,
+    );
+  });
 });
