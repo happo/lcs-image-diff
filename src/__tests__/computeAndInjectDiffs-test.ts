@@ -406,3 +406,55 @@ describe('row interning', () => {
     },
   );
 });
+
+describe('plain array input', () => {
+  // `ImageInput` types `data` as `ArrayLike<number>`, so a plain array is a
+  // supported input even though every other test here hands over a `Buffer`.
+  // Rows are copied out with `subarray` when the input can produce a view and
+  // sliced when it cannot, which is two code paths that have to agree.
+  const paint = (y: number, x: number): number[] =>
+    (x + y) % 5 === 0 ? [20, 60 + y, 120, 255] : [255, 255, 255, 255];
+
+  const buffered = (width: number, height: number): ImageInput => {
+    const data = Buffer.alloc(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const pos = (y * width + x) * 4;
+        const [r, g, b, a] = paint(y, x);
+        data[pos] = r;
+        data[pos + 1] = g;
+        data[pos + 2] = b;
+        data[pos + 3] = a;
+      }
+    }
+    return { data, width, height };
+  };
+
+  const asPlainArray = ({ data, width, height }: ImageInput): ImageInput => ({
+    data: Array.from({ length: width * height * 4 }, (_, i) => data[i]),
+    width,
+    height,
+  });
+
+  // Different heights so rows are injected, and different widths so the rows
+  // are padded out -- the padding is written by the same code.
+  const image1 = buffered(9, 14);
+  const image2 = buffered(12, 20);
+
+  it('produces the same rows as a typed array', () => {
+    const fromBuffers = computeAndInjectDiffs({ image1, image2 });
+    const fromArrays = computeAndInjectDiffs({
+      image1: asPlainArray(image1),
+      image2: asPlainArray(image2),
+    });
+
+    expect(fromArrays.image1Data).toEqual(fromBuffers.image1Data);
+    expect(fromArrays.image2Data).toEqual(fromBuffers.image2Data);
+    expect(fromArrays.image1InjectedRows).toEqual(
+      fromBuffers.image1InjectedRows,
+    );
+    expect(fromArrays.image2InjectedRows).toEqual(
+      fromBuffers.image2InjectedRows,
+    );
+  });
+});
