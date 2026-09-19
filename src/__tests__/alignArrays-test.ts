@@ -63,3 +63,23 @@ describe('completely different', () => {
     );
   });
 });
+
+it('aligns content shifted far enough to cross many stripes', () => {
+  // The backtrack rebuilds the direction table one stripe at a time, from the
+  // nearest checkpoint below it. Short inputs fit in a stripe or two and never
+  // exercise that; 900 rows is roughly fifteen of them. The shift is also far
+  // larger than the drift cap this algorithm used to have, which is the case
+  // that cap was removed for.
+  const common = Array.from({ length: 900 }, (_, i) => `row-${i}`);
+  const inserted = Array.from({ length: 400 }, (_, i) => `new-${i}`);
+
+  const a = common.slice();
+  const b = [...inserted, ...common];
+
+  alignArrays(a, b);
+
+  expect(a).toHaveLength(b.length);
+  expect(a.slice(0, 400)).toEqual(new Array(400).fill('+'));
+  expect(a.slice(400)).toEqual(common);
+  expect(b).toEqual([...inserted, ...common]);
+});
