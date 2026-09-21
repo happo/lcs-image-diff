@@ -379,9 +379,18 @@ export type AlignmentRun = [AlignmentOp, number];
  * How the rows of two images line up, as runs.
  *
  * Finding this is the expensive part of a diff -- hashing every row, interning
- * them, and running a band-limited LCS over both sequences. The answer, once
- * simplified, is a handful of runs. A caller that can keep it may hand it back
- * through `alignment` and skip the search entirely.
+ * them, and running a band-limited LCS over both sequences. The answer is a
+ * handful of runs. A caller that can keep it may hand it back through
+ * `alignment` and skip the search entirely.
+ *
+ * These describe the alignment **before** `simplifySegments` runs, which is
+ * what makes `[op, count]` sufficient. Up to that point each operation consumes
+ * from image 1, image 2 or both strictly in order, so the counts imply the
+ * indices. Simplification then cancels and combines gap blocks, and the combine
+ * branch emits a merged gap ahead of the match rows between its two halves --
+ * so afterwards the output is no longer in source order and counts alone can no
+ * longer say which row went where. Replaying simplification from these runs
+ * reproduces it exactly, and costs nothing beside the search it avoids.
  *
  * An empty array means the rows already corresponded one to one and nothing
  * needs injecting. That is a different statement from having no alignment at
@@ -396,12 +405,16 @@ const OP_FOR_SEGMENT: Record<SegmentType, AlignmentOp> = {
   match: 'm',
 };
 
-const SEGMENT_FOR_OP: Record<string, SegmentType> = {
-  a: 'before',
-  b: 'after',
-  p: 'neutral',
-  m: 'match',
-};
+// A Map, not an object: this looks up values that came from storage, and a
+// plain object would resolve an inherited name such as `toString` to a function
+// rather than to `undefined` -- passing the check below and then falling
+// through to be treated as a match.
+const SEGMENT_FOR_OP = new Map<string, SegmentType>([
+  ['a', 'before'],
+  ['b', 'after'],
+  ['p', 'neutral'],
+  ['m', 'match'],
+]);
 
 function runsFromSegments(segments: Segment[]): RowAlignment {
   return segments
@@ -424,9 +437,16 @@ function segmentsFromRuns(alignment: RowAlignment): Segment[] {
   let i2 = 0;
 
   for (const [op, length] of alignment) {
-    const type = SEGMENT_FOR_OP[op];
+    const type = SEGMENT_FOR_OP.get(op);
     if (type === undefined) {
       throw new Error(`Unknown alignment operation: ${String(op)}`);
+    }
+    // Counts index into the images, so a bad one is silent corruption rather
+    // than a loud failure. These arrive from storage; check them.
+    if (!Number.isInteger(length) || length <= 0) {
+      throw new Error(
+        `Alignment run '${op}' has an invalid length: ${String(length)}`,
+      );
     }
 
     if (type === 'before') {
@@ -615,8 +635,14 @@ function align({
     if (alignment.length === 0) {
       return { injected1: new Set(), injected2: new Set(), alignment };
     }
+    const storedSegments = segmentsFromRuns(alignment);
+    assertCoversImages(storedSegments, image1Data.length, image2Data.length);
+    // The same simplification the computing path applies, over the same
+    // segments. Cheap, and it is what keeps `[op, count]` a faithful
+    // representation rather than an approximate one.
+    simplifySegments(storedSegments, SIMPLIFY_THRESHOLD);
     const stored = applySegments(
-      segmentsFromRuns(alignment),
+      storedSegments,
       image1Data,
       image2Data,
       maxWidth,
@@ -637,12 +663,52 @@ function align({
   alignArrays(unique1, unique2);
 
   const segments = buildSegments(unique1, unique2);
+
+  // Taken before simplification, which is the only point at which the runs
+  // still imply their own indices. See `RowAlignment`.
+  const alignmentRuns = runsFromSegments(segments);
+
   simplifySegments(segments, SIMPLIFY_THRESHOLD);
 
   return {
     ...applySegments(segments, image1Data, image2Data, maxWidth),
-    alignment: runsFromSegments(segments),
+    alignment: alignmentRuns,
   };
+}
+
+/**
+ * Check that an alignment accounts for exactly the rows these two images have.
+ *
+ * A stored alignment belongs to one specific pair. Applied to any other, the
+ * row indices it implies run past the end of an image, and `reconstructImages`
+ * would read undefined rows rather than fail -- silent corruption from a
+ * mismatch that is trivial to detect here.
+ */
+function assertCoversImages(
+  segments: Segment[],
+  height1: number,
+  height2: number,
+): void {
+  let rows1 = 0;
+  let rows2 = 0;
+
+  for (const segment of segments) {
+    if (segment.type === 'match') {
+      rows1 += segment.rows.length;
+      rows2 += segment.rows.length;
+    } else if (segment.type === 'after') {
+      rows1 += segment.rows.length;
+    } else if (segment.type === 'before') {
+      rows2 += segment.rows.length;
+    }
+  }
+
+  if (rows1 !== height1 || rows2 !== height2) {
+    throw new Error(
+      `Alignment describes ${rows1}x${rows2} rows, but the images have ` +
+        `${height1}x${height2}. It belongs to a different pair of images.`,
+    );
+  }
 }
 
 /**
@@ -682,12 +748,16 @@ export interface ComputeAndInjectDiffsOptions {
    * An alignment from an earlier call on the same two images, which is applied
    * instead of being searched for again.
    *
-   * Only ever pass runs produced from this exact pair of images by this version
-   * of the library. The alignment is a function of the pixels, so the same
-   * images always yield the same runs -- but the simplification thresholds and
-   * anchor rules that decide where the gaps fall are this version's, and runs
-   * from another one describe a different answer. Nothing here can detect a
-   * mismatch; it will reconstruct whatever it is given.
+   * Only ever pass runs produced from this exact pair of images, by this
+   * version of the library, under the same `hashFunction`. Pixels alone do not
+   * identify an alignment: rows are compared through the hash function before
+   * anything is aligned, so a different, stateful or colliding one yields
+   * different runs from identical pixels. The simplification threshold and
+   * anchor rules that decide where the gaps fall are likewise this version's.
+   *
+   * Runs that describe a different number of rows than these images have are
+   * rejected, but that catches only the obvious mismatches -- runs of the right
+   * shape from the wrong hash function reconstruct silently and wrongly.
    */
   alignment?: RowAlignment;
 }
