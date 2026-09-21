@@ -357,6 +357,101 @@ function isOppositeType(t1: SegmentType, t2: SegmentType): boolean {
 }
 
 /**
+ * Which image supplies the rows in one run of the alignment.
+ *
+ * Named for the image the rows come from, which is the reverse of the segment
+ * types above: a `'before'` segment is rows only image *2* has, and an
+ * `'after'` segment is rows only image 1 has. The internal names describe which
+ * array received the placeholder; these describe where the pixels came from,
+ * which is what a consumer of a stored alignment needs to know.
+ *
+ * - `m` -- both images, paired
+ * - `b` -- image 1 alone
+ * - `a` -- image 2 alone
+ * - `p` -- neither; padding on both sides
+ */
+export type AlignmentOp = 'm' | 'b' | 'a' | 'p';
+
+/** One run of the alignment: an operation and how many rows it covers. */
+export type AlignmentRun = [AlignmentOp, number];
+
+/**
+ * How the rows of two images line up, as runs.
+ *
+ * Finding this is the expensive part of a diff -- hashing every row, interning
+ * them, and running a band-limited LCS over both sequences. The answer, once
+ * simplified, is a handful of runs. A caller that can keep it may hand it back
+ * through `alignment` and skip the search entirely.
+ *
+ * An empty array means the rows already corresponded one to one and nothing
+ * needs injecting. That is a different statement from having no alignment at
+ * all, and callers that store one have to keep the two apart.
+ */
+export type RowAlignment = Array<AlignmentRun>;
+
+const OP_FOR_SEGMENT: Record<SegmentType, AlignmentOp> = {
+  before: 'a',
+  after: 'b',
+  neutral: 'p',
+  match: 'm',
+};
+
+const SEGMENT_FOR_OP: Record<string, SegmentType> = {
+  a: 'before',
+  b: 'after',
+  p: 'neutral',
+  m: 'match',
+};
+
+function runsFromSegments(segments: Segment[]): RowAlignment {
+  return segments
+    .filter(segment => segment.rows.length > 0)
+    .map(segment => [OP_FOR_SEGMENT[segment.type], segment.rows.length]);
+}
+
+/**
+ * Rebuild the segment list from stored runs.
+ *
+ * The runs say how many rows each operation covers but not which rows, because
+ * that is implied: each operation consumes from image 1, image 2 or both, in
+ * order. Walking the runs and handing out indices reproduces exactly what
+ * `buildSegments` followed by `simplifySegments` produced, without running
+ * either of them -- or the LCS in front of them.
+ */
+function segmentsFromRuns(alignment: RowAlignment): Segment[] {
+  const segments: Segment[] = [];
+  let i1 = 0;
+  let i2 = 0;
+
+  for (const [op, length] of alignment) {
+    const type = SEGMENT_FOR_OP[op];
+    if (type === undefined) {
+      throw new Error(`Unknown alignment operation: ${String(op)}`);
+    }
+
+    if (type === 'before') {
+      const rows: BeforeRow[] = [];
+      for (let n = 0; n < length; n++) rows.push({ i2: i2++ });
+      segments.push({ type, rows });
+    } else if (type === 'after') {
+      const rows: AfterRow[] = [];
+      for (let n = 0; n < length; n++) rows.push({ i1: i1++ });
+      segments.push({ type, rows });
+    } else if (type === 'neutral') {
+      const rows: NeutralRow[] = [];
+      for (let n = 0; n < length; n++) rows.push({});
+      segments.push({ type, rows });
+    } else {
+      const rows: MatchRow[] = [];
+      for (let n = 0; n < length; n++) rows.push({ i1: i1++, i2: i2++ });
+      segments.push({ type, rows });
+    }
+  }
+
+  return segments;
+}
+
+/**
  * Simplifies the segment list in place:
  *   - Cancel: adjacent opposite-direction gap blocks cancel each other out.
  *   - Cancel: opposite-direction gap blocks within `threshold` match rows also
@@ -500,15 +595,39 @@ function align({
   image2Data,
   maxWidth,
   hashFunction,
+  alignment,
 }: {
   image1Data: Uint8ClampedArray[];
   image2Data: Uint8ClampedArray[];
   maxWidth: number;
   hashFunction: HashFunction;
-}): { injected1: Set<number>; injected2: Set<number> } {
+  alignment?: RowAlignment;
+}): {
+  injected1: Set<number>;
+  injected2: Set<number>;
+  alignment: RowAlignment;
+} {
+  // A caller that kept the runs from an earlier call skips straight to
+  // applying them. Everything between here and `reconstructImages` -- hashing
+  // every row, interning, the LCS, simplification -- is the search for an
+  // answer it is already holding.
+  if (alignment !== undefined) {
+    if (alignment.length === 0) {
+      return { injected1: new Set(), injected2: new Set(), alignment };
+    }
+    const stored = applySegments(
+      segmentsFromRuns(alignment),
+      image1Data,
+      image2Data,
+      maxWidth,
+    );
+    return { ...stored, alignment };
+  }
+
   if (similarEnough({ image1Data, image2Data })) {
-    // Nothing was aligned, so nothing was injected.
-    return { injected1: new Set(), injected2: new Set() };
+    // Nothing was aligned, so nothing was injected -- and the rows already
+    // correspond, which is what an empty run list says.
+    return { injected1: new Set(), injected2: new Set(), alignment: [] };
   }
 
   const hashedImage1Data = image1Data.map(hashFunction);
@@ -517,11 +636,31 @@ function align({
   const [unique1, unique2] = toUniqueHashes(hashedImage1Data, hashedImage2Data);
   alignArrays(unique1, unique2);
 
+  const segments = buildSegments(unique1, unique2);
+  simplifySegments(segments, SIMPLIFY_THRESHOLD);
+
+  return {
+    ...applySegments(segments, image1Data, image2Data, maxWidth),
+    alignment: runsFromSegments(segments),
+  };
+}
+
+/**
+ * Rebuild both images from a segment list, in place.
+ *
+ * Split out of `align` so that a stored alignment and a freshly computed one
+ * take exactly the same path from segments to pixels: whatever the runs came
+ * from, the images they produce are built by this one function.
+ */
+function applySegments(
+  segments: Segment[],
+  image1Data: Uint8ClampedArray[],
+  image2Data: Uint8ClampedArray[],
+  maxWidth: number,
+): { injected1: Set<number>; injected2: Set<number> } {
   const image1Bg = image1Data[0].slice(0, 4);
   const image2Bg = image2Data[0].slice(0, 4);
 
-  const segments = buildSegments(unique1, unique2);
-  simplifySegments(segments, SIMPLIFY_THRESHOLD);
   const { out1, out2, injected1, injected2 } = reconstructImages(
     segments, image1Data, image2Data, image1Bg, image2Bg, maxWidth,
   );
@@ -539,6 +678,18 @@ export interface ComputeAndInjectDiffsOptions {
   image1: ImageInput;
   image2: ImageInput;
   hashFunction?: HashFunction;
+  /**
+   * An alignment from an earlier call on the same two images, which is applied
+   * instead of being searched for again.
+   *
+   * Only ever pass runs produced from this exact pair of images by this version
+   * of the library. The alignment is a function of the pixels, so the same
+   * images always yield the same runs -- but the simplification thresholds and
+   * anchor rules that decide where the gaps fall are this version's, and runs
+   * from another one describe a different answer. Nothing here can detect a
+   * mismatch; it will reconstruct whatever it is given.
+   */
+  alignment?: RowAlignment;
 }
 
 export interface ComputeAndInjectDiffsResult {
@@ -546,6 +697,12 @@ export interface ComputeAndInjectDiffsResult {
   image2Data: Uint8ClampedArray[];
   image1InjectedRows: Set<number>;
   image2InjectedRows: Set<number>;
+  /**
+   * How the rows lined up, as runs -- either the ones that were passed in or
+   * the ones just computed. Small enough to keep, and handing it back to a
+   * later call skips the search that produced it.
+   */
+  alignment: RowAlignment;
 }
 
 /**
@@ -568,17 +725,19 @@ export default function computeAndInjectDiffs({
   // A fresh interner per call: its numbers only mean anything within one
   // alignment, and it holds on to the rows it is given.
   hashFunction = createInterner(),
+  alignment: storedAlignment,
 }: ComputeAndInjectDiffsOptions): ComputeAndInjectDiffsResult {
   const maxWidth = Math.max(image1.width, image2.width);
 
   const image1Data = imageTo2DArray(image1, maxWidth - image1.width);
   const image2Data = imageTo2DArray(image2, maxWidth - image2.width);
 
-  const { injected1, injected2 } = align({
+  const { injected1, injected2, alignment } = align({
     image1Data,
     image2Data,
     maxWidth,
     hashFunction,
+    alignment: storedAlignment,
   });
 
   return {
@@ -586,5 +745,6 @@ export default function computeAndInjectDiffs({
     image2Data,
     image1InjectedRows: injected1,
     image2InjectedRows: injected2,
+    alignment,
   };
 }

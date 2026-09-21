@@ -1,6 +1,7 @@
 import { DIFF_TRACE_PADDING } from './constants.ts';
 import computeAndInjectDiffs from './computeAndInjectDiffs.ts';
 import type { HashFunction, ImageInput } from './computeAndInjectDiffs.ts';
+import type { RowAlignment } from './computeAndInjectDiffs.ts';
 import createDiffImage from './createDiffImage.ts';
 import type DiffTrace from './DiffTrace.ts';
 
@@ -8,11 +9,22 @@ export { DIFF_TRACE_PADDING };
 
 export type { ColorLike, Rgba } from './compose.ts';
 export type { RowKey } from './alignArrays.ts';
-export type { HashFunction, ImageInput } from './computeAndInjectDiffs.ts';
+export type {
+  AlignmentOp,
+  AlignmentRun,
+  HashFunction,
+  ImageInput,
+  RowAlignment,
+} from './computeAndInjectDiffs.ts';
 export type { default as DiffTrace } from './DiffTrace.ts';
 
 export interface ImageDiffOptions {
   hashFunction?: HashFunction;
+  /**
+   * An alignment computed earlier for these same two images, applied instead
+   * of being searched for again. See `ComputeAndInjectDiffsOptions`.
+   */
+  alignment?: RowAlignment;
 }
 
 export interface ImageDiffResult {
@@ -22,17 +34,20 @@ export interface ImageDiffResult {
   diff: number;
   maxDiff: number;
   trace: DiffTrace;
+  /** How the rows lined up. Worth keeping; see `RowAlignment`. */
+  alignment: RowAlignment;
 }
 
 export default function imageDiff(
   image1: ImageInput,
   image2: ImageInput,
-  { hashFunction }: ImageDiffOptions = {},
+  { hashFunction, alignment: storedAlignment }: ImageDiffOptions = {},
 ): ImageDiffResult {
-  const { image1Data, image2Data } = computeAndInjectDiffs({
+  const { image1Data, image2Data, alignment } = computeAndInjectDiffs({
     image1,
     image2,
     hashFunction,
+    alignment: storedAlignment,
   });
 
   const { data, width, height, diff, trace, maxDiff } = createDiffImage({
@@ -50,6 +65,7 @@ export default function imageDiff(
     diff,
     trace,
     maxDiff: differentDimensions ? 1 : maxDiff,
+    alignment,
   };
 }
 
