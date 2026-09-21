@@ -116,20 +116,6 @@ describe('applying a stored alignment', () => {
     ).toThrow(/Unknown alignment operation/);
   });
 
-  it('skips the work when the alignment is empty', async () => {
-    const [image1, image2] = await shiftedPair();
-
-    // An empty alignment says the rows correspond, so nothing is injected --
-    // even here, where computing one would have injected plenty.
-    const { image1InjectedRows, image2InjectedRows } = computeAndInjectDiffs({
-      image1,
-      image2,
-      alignment: [],
-    });
-
-    expect(image1InjectedRows.size).toBe(0);
-    expect(image2InjectedRows.size).toBe(0);
-  });
 });
 
 describe('the runs themselves', () => {
@@ -251,16 +237,14 @@ describe('an alignment that does not belong to these images', () => {
     const image1 = rowsImage([[10, 20]]);
     const image2 = rowsImage([[20, 20]]);
 
-    // Right shape, wrong pair. Without the check the implied indices run past
-    // the end of an image and undefined rows are read as content.
+    // Right shape and within the output bound, but it describes 30 rows of
+    // each image where there are 20. Without the check the implied indices run
+    // past the end of an image and undefined rows are read as content.
     expect(() =>
       computeAndInjectDiffs({
         image1,
         image2,
-        alignment: [
-          ['m', 500],
-          ['b', 40],
-        ],
+        alignment: [['m', 30]],
       }),
     ).toThrow(/belongs to a different pair of images/);
   });
@@ -293,5 +277,97 @@ describe('validating runs that came from storage', () => {
         alignment: [['m', length]],
       }),
     ).toThrow(/invalid length/);
+  });
+});
+
+describe('runs that would be expensive to materialize', () => {
+  it('rejects an enormous count without expanding it', () => {
+    const image1 = rowsImage([[10, 20]]);
+    const image2 = rowsImage([[20, 20]]);
+
+    // Checked as arithmetic on the runs. Expanded into rows first, as it once
+    // was, this allocates a trillion objects before anything can object to it.
+    const started = Date.now();
+    expect(() =>
+      computeAndInjectDiffs({
+        image1,
+        image2,
+        alignment: [['m', 1e12]],
+      }),
+    ).toThrow(/more than the 40 the two images can produce/);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it('rejects an enormous padding run, which the row totals do not bound', () => {
+    const image1 = rowsImage([[10, 20]]);
+    const image2 = rowsImage([[20, 20]]);
+
+    // `p` consumes from neither image, so it leaves the per-image totals
+    // correct and is caught only by the bound on output rows.
+    const started = Date.now();
+    expect(() =>
+      computeAndInjectDiffs({
+        image1,
+        image2,
+        alignment: [
+          ['m', 20],
+          ['p', 1e12],
+        ],
+      }),
+    ).toThrow(/output rows/);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+});
+
+describe('the identity alignment', () => {
+  it('is refused when the images are different heights', () => {
+    // `[]` says the rows already correspond, which cannot be true here. Left
+    // unchecked the two arrays come back unequal in length and the caller reads
+    // undefined rows off the end of the shorter one.
+    expect(() =>
+      computeAndInjectDiffs({
+        image1: rowsImage([[10, 20]]),
+        image2: rowsImage([[20, 30]]),
+        alignment: [],
+      }),
+    ).toThrow(/rows correspond one to one/);
+  });
+
+  it('leaves equal-height images untouched', () => {
+    const { image1Data, image2Data, image1InjectedRows } =
+      computeAndInjectDiffs({
+        image1: rowsImage([[10, 20]]),
+        image2: rowsImage([[20, 20]]),
+        alignment: [],
+      });
+
+    expect(image1Data.length).toBe(20);
+    expect(image2Data.length).toBe(20);
+    expect(image1InjectedRows.size).toBe(0);
+  });
+
+  it('survives a round trip through imageDiff', () => {
+    // Equal heights are not enough on their own: `similarEnough` also wants
+    // most rows to match, so these differ in 2 rows of 20 rather than in all
+    // of them.
+    const mostlyMatching = (): [ImageInput, ImageInput] => [
+      rowsImage([
+        [10, 18],
+        [99, 2],
+      ]),
+      rowsImage([
+        [10, 18],
+        [88, 2],
+      ]),
+    ];
+
+    const [image1, image2] = mostlyMatching();
+    const computed = imageDiff(image1, image2);
+    expect(computed.alignment).toEqual([]);
+
+    const [fresh1, fresh2] = mostlyMatching();
+    expect(
+      imageDiff(fresh1, fresh2, { alignment: computed.alignment }).data,
+    ).toEqual(computed.data);
   });
 });

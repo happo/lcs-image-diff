@@ -632,11 +632,14 @@ function align({
   // every row, interning, the LCS, simplification -- is the search for an
   // answer it is already holding.
   if (alignment !== undefined) {
+    // Before `segmentsFromRuns`, which expands every count into rows: a count
+    // is checked arithmetic here, and an array there.
+    assertAlignmentFits(alignment, image1Data.length, image2Data.length);
+
     if (alignment.length === 0) {
       return { injected1: new Set(), injected2: new Set(), alignment };
     }
     const storedSegments = segmentsFromRuns(alignment);
-    assertCoversImages(storedSegments, image1Data.length, image2Data.length);
     // The same simplification the computing path applies, over the same
     // segments. Cheap, and it is what keeps `[op, count]` a faithful
     // representation rather than an approximate one.
@@ -677,29 +680,73 @@ function align({
 }
 
 /**
- * Check that an alignment accounts for exactly the rows these two images have.
+ * Check that an alignment can describe these two images, reading only the runs.
+ *
+ * Deliberately arithmetic, and deliberately ahead of `segmentsFromRuns`: that
+ * function expands every count into an array of rows, so a malformed
+ * `['m', 1e12]` would exhaust memory before any check on it could run. Summing
+ * the counts costs nothing and rejects the same input.
  *
  * A stored alignment belongs to one specific pair. Applied to any other, the
- * row indices it implies run past the end of an image, and `reconstructImages`
- * would read undefined rows rather than fail -- silent corruption from a
- * mismatch that is trivial to detect here.
+ * row indices it implies run past the end of an image and `reconstructImages`
+ * reads undefined rows rather than failing -- silent corruption from a mismatch
+ * that is cheap to catch here.
  */
-function assertCoversImages(
-  segments: Segment[],
+function assertAlignmentFits(
+  alignment: RowAlignment,
   height1: number,
   height2: number,
 ): void {
+  if (alignment.length === 0) {
+    // The identity alignment claims the rows already correspond one to one,
+    // which cannot be true of images with different numbers of them. Left
+    // unchecked this returns two arrays of unequal length, and the caller reads
+    // undefined rows off the end of the shorter one.
+    if (height1 !== height2) {
+      throw new Error(
+        `An empty alignment says the rows correspond one to one, but the ` +
+          `images are ${height1} and ${height2} rows tall.`,
+      );
+    }
+    return;
+  }
+
   let rows1 = 0;
   let rows2 = 0;
+  let outputRows = 0;
 
-  for (const segment of segments) {
-    if (segment.type === 'match') {
-      rows1 += segment.rows.length;
-      rows2 += segment.rows.length;
-    } else if (segment.type === 'after') {
-      rows1 += segment.rows.length;
-    } else if (segment.type === 'before') {
-      rows2 += segment.rows.length;
+  for (const [op, length] of alignment) {
+    const type = SEGMENT_FOR_OP.get(op);
+    if (type === undefined) {
+      throw new Error(`Unknown alignment operation: ${String(op)}`);
+    }
+    // Counts index into the images, so a bad one is silent corruption rather
+    // than a loud failure. These arrive from storage; check them.
+    if (!Number.isInteger(length) || length <= 0) {
+      throw new Error(
+        `Alignment run '${op}' has an invalid length: ${String(length)}`,
+      );
+    }
+
+    outputRows += length;
+    if (type === 'match') {
+      rows1 += length;
+      rows2 += length;
+    } else if (type === 'after') {
+      rows1 += length;
+    } else if (type === 'before') {
+      rows2 += length;
+    }
+
+    // `neutral` consumes from neither image, so it moves `outputRows` alone and
+    // the totals below cannot bound it. Every row of the output is a row of one
+    // image, of the other, or filler opposite one of those -- so the output can
+    // never be taller than both images put together, whatever the runs claim.
+    if (outputRows > height1 + height2) {
+      throw new Error(
+        `Alignment describes at least ${outputRows} output rows, more than ` +
+          `the ${height1 + height2} the two images can produce.`,
+      );
     }
   }
 
