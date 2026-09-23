@@ -21,6 +21,7 @@ import type { ImageInput, ImageDiffResult } from 'lcs-image-diff';
 import computeAndInjectDiffs from 'lcs-image-diff/src/computeAndInjectDiffs.js';
 import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
 import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
+import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -68,6 +69,31 @@ assert.strictEqual(
   injected.image1Data.length,
   injected.image2Data.length,
   'computeAndInjectDiffs via deep import evens the heights',
+);
+
+// happo-compare decides which pixels changed with this detector, so it has to
+// load from the built package too.
+{
+  const grey = [128, 128, 128, 255];
+  const edgeRow = [0, 0, 0, 255, 0, 0, 0, 255, ...grey, 255, 255, 255, 255, 255, 255, 255, 255];
+  const edge = new Uint8ClampedArray(Array.from({ length: 5 }, () => edgeRow).flat());
+  const words = asPixelWords(edge);
+  const size = { width: 5, height: 5 };
+  assert.strictEqual(
+    isAntialiased(edge, 2, 2, size, size, words, words),
+    true,
+    'isAntialiased via deep import',
+  );
+}
+
+// The options that decide which pixels count reach the diff image.
+const thresholded = imageDiff(image1, image2, {
+  threshold: 1,
+  ignoreAntialiasing: true,
+});
+assert.ok(
+  !thresholded.trace.data.some(v => v > 0),
+  'nothing traced above the largest possible delta',
 );
 
 console.log('smoke: package entry point OK');

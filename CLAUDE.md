@@ -12,6 +12,7 @@ src/
   createDiffImage.ts        # Renders the final diff image + DiffTrace
   getDiffPixel.ts           # Per-pixel diff computation
   colorDelta.ts             # YIQ perceptual color difference
+  antialiasing.ts           # Anti-aliased pixel detection (shared with happo-compare)
   compose.ts                # Alpha blending (integer math)
   DiffTrace.ts              # SVG outline generation via imagetracerjs
   similarEnough.ts          # Early-exit: skip LCS if >70% similar
@@ -74,6 +75,8 @@ does.
 
 **Color delta** (`colorDelta.ts`): YIQ NTSC color space (from pixelmatch). Weighted: `0.5053×y² + 0.299×i² + 0.1957×q²`, normalized by `MAX_YIQ_DIFFERENCE`. Sign encodes lighter vs darker.
 
+**Which pixels count** (`createDiffImage.ts`, `antialiasing.ts`): by default any differing pixel is a change. `threshold` and `ignoreAntialiasing` narrow that to happo-compare's rule -- colour delta above the threshold, and not anti-aliasing in either image -- so a viewer given a comparison's settings highlights the pixels that comparison measured. happo-compare imports `isAntialiased` from here rather than keeping its own copy, which is what keeps the two from drifting. A differing pixel that does not count is left out of the trace and drawn faintly tinted instead of in the change colour. `diff` and `maxDiff` still include every differing pixel: they describe how far apart the images are, not what was highlighted.
+
 **Diff colors**: Magenta `#C52772` = changed pixels, Green `#6A8500` = added rows.
 
 ## Testing
@@ -101,6 +104,13 @@ const result = imageDiff(bitmap1, bitmap2);
 // so rows compare equal only if identical; a digest is a little quicker but a
 // collision aligns two different rows as one.
 const withOwnHash = imageDiff(bitmap1, bitmap2, { hashFunction });
+
+// Only count pixels happo-compare would: above its compareThreshold, and not
+// anti-aliasing.
+const likeTheComparison = imageDiff(image1, image2, {
+  threshold: 0.01,
+  ignoreAntialiasing: true,
+});
 ```
 
 Return value: `{ data: Uint8ClampedArray, width, height, diff: number (0–1), trace: DiffTrace }`.
@@ -110,16 +120,17 @@ Return value: `{ data: Uint8ClampedArray, width, height, diff: number (0–1), t
 major -- the deprecation is written on its own const in `index.ts` so that it
 reaches the emitted declaration.
 
-Two modules are exported individually. They are listed one by one in
+Three modules are exported individually. They are listed one by one in
 `exports` rather than matched by a wildcard, so the public surface is only
 what callers actually import -- adding another means adding an entry.
 
 ```js
 import computeAndInjectDiffs from 'lcs-image-diff/computeAndInjectDiffs.js';
 import { colorDeltaChannels } from 'lcs-image-diff/colorDelta.js';
+import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
 ```
 
-Both are also reachable under a `src/` prefix, which predates this package
+The first two are also reachable under a `src/` prefix, which predates this package
 having an `exports` field. Callers elsewhere still use that spelling; it goes
 away in a breaking change. `scripts/smoke.ts` covers every one of these paths
 so none of them can break silently.

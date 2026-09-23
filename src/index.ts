@@ -3,6 +3,7 @@ import computeAndInjectDiffs from './computeAndInjectDiffs.ts';
 import type { HashFunction, ImageInput } from './computeAndInjectDiffs.ts';
 import type { RowAlignment } from './computeAndInjectDiffs.ts';
 import createDiffImage from './createDiffImage.ts';
+import type { ChangedPixelOptions } from './createDiffImage.ts';
 import type DiffTrace from './DiffTrace.ts';
 
 export { DIFF_TRACE_PADDING };
@@ -18,7 +19,10 @@ export type {
 } from './computeAndInjectDiffs.ts';
 export type { default as DiffTrace } from './DiffTrace.ts';
 
-export interface ImageDiffOptions {
+export type { ChangedPixelOptions } from './createDiffImage.ts';
+export type { PixelBytes, PixelSize } from './antialiasing.ts';
+
+export interface ImageDiffOptions extends ChangedPixelOptions {
   hashFunction?: HashFunction;
   /**
    * An alignment computed earlier for these same two images, applied instead
@@ -41,7 +45,12 @@ export interface ImageDiffResult {
 export default function imageDiff(
   image1: ImageInput,
   image2: ImageInput,
-  { hashFunction, alignment: storedAlignment }: ImageDiffOptions = {},
+  {
+    hashFunction,
+    alignment: storedAlignment,
+    threshold,
+    ignoreAntialiasing,
+  }: ImageDiffOptions = {},
 ): ImageDiffResult {
   const { image1Data, image2Data, alignment } = computeAndInjectDiffs({
     image1,
@@ -53,6 +62,8 @@ export default function imageDiff(
   const { data, width, height, diff, trace, maxDiff } = createDiffImage({
     image1Data,
     image2Data,
+    threshold,
+    ignoreAntialiasing,
   });
 
   const differentDimensions =

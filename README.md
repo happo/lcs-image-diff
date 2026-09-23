@@ -79,6 +79,29 @@ const { data, width, height, diff } = imageDiff(image1, image2, {
 });
 ```
 
+## Ignoring small differences and anti-aliasing
+
+By default every pixel that differs at all is drawn as a change and traced.
+Two options narrow that down:
+
+- `threshold` (default `0`): a pixel counts as changed only if its color
+  delta is strictly greater than this. Deltas run from 0 (identical) to 1
+  (as different as two colors can be), the same scale happo-compare's
+  `compareThreshold` uses.
+- `ignoreAntialiasing` (default `false`): pixels that look like anti-aliasing
+  in either image do not count.
+
+```js
+const { data, trace } = imageDiff(image1, image2, {
+  threshold: 0.01,
+  ignoreAntialiasing: true,
+});
+```
+
+Pixels that differ but do not count are left out of the trace and drawn with a
+faint tint in the diff image, so you can still see where the images differ.
+The `diff` and `maxDiff` values still include every differing pixel.
+
 ## Getting a diff trace
 
 When presenting an image diff to a user, it can be helpful to highlight diff

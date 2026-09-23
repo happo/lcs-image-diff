@@ -18,6 +18,10 @@
       "types": "./dist/colorDelta.d.ts",
       "default": "./dist/colorDelta.js"
     },
+    "./antialiasing.js": {
+      "types": "./dist/antialiasing.d.ts",
+      "default": "./dist/antialiasing.js"
+    },
     "./src/computeAndInjectDiffs.js": {
       "types": "./dist/computeAndInjectDiffs.d.ts",
       "default": "./dist/computeAndInjectDiffs.js"
