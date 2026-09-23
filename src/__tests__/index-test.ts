@@ -102,3 +102,13 @@ it('has maxDiff=1 when images are of different size', async () => {
   expect(diff).toBeLessThan(1);
   expect(maxDiff).toEqual(1);
 });
+
+it('passes threshold and ignoreAntialiasing through to the diff image', () => {
+  const counted = subject();
+  const thresholded = imageDiff(image1, image2, {
+    threshold: 1,
+    ignoreAntialiasing: true,
+  });
+  expect(counted.trace.data.some(v => v > 0)).toBe(true);
+  expect(thresholded.trace.data.some(v => v > 0)).toBe(false);
+});
