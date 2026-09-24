@@ -1,7 +1,7 @@
 import alignArrays, { PLACEHOLDER } from './alignArrays.ts';
 import type { RowKey } from './alignArrays.ts';
 import compose from './compose.ts';
-import { packRows } from './flatRows.ts';
+import { FILLER, packRows } from './flatRows.ts';
 import type { ColorLike } from './compose.ts';
 import similarEnough from './similarEnough.ts';
 
@@ -49,6 +49,10 @@ function imageTo2DArray(
   // place. Aligning only reads them, and `computeAndInjectDiffs` writes the
   // result into a buffer of its own once the alignment is known, so the
   // caller's pixels are never copied twice or handed back. See `flatRows.ts`.
+  //
+  // That includes the narrower of two images whenever the aligner can treat
+  // its rows as padded without them being so, which is the default. Its
+  // padding is then written only by `materialize`.
   if (padSize === 0 && pixels.length >= rowSize * height) {
     const view = new Uint8ClampedArray(
       pixels.buffer,
@@ -62,8 +66,9 @@ function imageTo2DArray(
     return rows;
   }
 
-  // Padded rows are copies, since the padding is part of what the alignment
-  // hashes. One buffer for the whole image, handed out a row at a time.
+  // Padded rows are copies, which a caller's own `hashFunction` needs: it is
+  // handed the padded row. One buffer for the whole image, handed out a row at
+  // a time.
   const paddedRowSize = rowSize + padSize;
   const flat = new Uint8ClampedArray(paddedRowSize * height);
 
@@ -81,7 +86,7 @@ function imageTo2DArray(
     pixelsInRow.set(pixels.subarray(start, start + rowSize));
 
     // Fills nothing when there is no padding, since the row is already full.
-    pixelsInRow.fill(1, rowSize);
+    pixelsInRow.fill(FILLER, rowSize);
 
     newData.push(pixelsInRow);
   }
@@ -139,12 +144,26 @@ const FINGERPRINT_STRIDE = 61;
 // one. Without this a set of rows that all sample the same is quadratic.
 const MAX_CANDIDATES = 8;
 
-function fingerprint(row: Uint8ClampedArray): number {
-  let result = row.length;
-  for (let i = 0; i < row.length; i += FINGERPRINT_STRIDE) {
+// The fingerprint of `row` followed by `padBytes` bytes of `FILLER`, without
+// that row having to exist.
+function fingerprint(row: Uint8ClampedArray, padBytes: number): number {
+  const length = row.length + padBytes;
+  let result = length;
+  let i = 0;
+  for (; i < row.length; i += FINGERPRINT_STRIDE) {
     result = (Math.imul(result, 31) + row[i]) | 0;
   }
+  for (; i < length; i += FINGERPRINT_STRIDE) {
+    result = (Math.imul(result, 31) + FILLER) | 0;
+  }
   return result;
+}
+
+function isFiller(bytes: Uint8Array, from: number): boolean {
+  for (let i = from; i < bytes.length; i += 1) {
+    if (bytes[i] !== FILLER) return false;
+  }
+  return true;
 }
 
 export interface InternerOptions {
@@ -153,9 +172,26 @@ export interface InternerOptions {
 }
 
 interface Group {
-  candidates: { bytes: Uint8Array; id: number }[];
+  candidates: { bytes: Uint8Array; padBytes: number; id: number }[];
   byContents: Map<string, number> | null;
 }
+
+/**
+ * Interns a row as if `padBytes` bytes of `FILLER` followed it.
+ *
+ * Two images of different widths are aligned as though the narrower were
+ * padded out to the wider. Holding that padding in memory would mean a padded
+ * copy of the whole image before anything is aligned, and another once its
+ * rows are rearranged. This gives each row the number its padded form would
+ * get instead -- same fingerprint, same comparisons, same keys -- so the
+ * narrower image can be aligned from views of the caller's pixels.
+ */
+type PaddedIntern = (row: Uint8ClampedArray, padBytes: number) => number;
+
+// The padded form of every interner `createInterner` made, so that
+// `computeAndInjectDiffs` can tell an interner from a caller's own hash, which
+// is owed the padded rows themselves.
+const paddedInterns = new WeakMap<HashFunction, PaddedIntern>();
 
 /**
  * Gives each distinct row a number, so the aligner compares numbers rather
@@ -174,11 +210,53 @@ export function createInterner({
   rowsEqual = defaultRowsEqual,
   hashRow = defaultHashRow,
 }: InternerOptions = {}): HashFunction {
+  const intern = createPaddedIntern({ rowsEqual, hashRow });
+  const hashFunction: HashFunction = row => intern(row, 0);
+  paddedInterns.set(hashFunction, intern);
+  return hashFunction;
+}
+
+function createPaddedIntern({
+  rowsEqual,
+  hashRow,
+}: Required<InternerOptions>): PaddedIntern {
   const groups = new Map<number, Group>();
   let nextId = 0;
 
-  return row => {
-    const rowFingerprint = fingerprint(row);
+  // Whether the two padded rows are equal. Both come out the same length once
+  // padded -- they are rows of one alignment -- so wherever one holds bytes the
+  // other only has as padding, those bytes must be filler.
+  const paddedEqual = (
+    a: Uint8Array,
+    aPad: number,
+    b: Uint8Array,
+    bPad: number,
+  ): boolean => {
+    if (aPad === bPad) return rowsEqual(a, b);
+    if (a.length + aPad !== b.length + bPad) return false;
+    const shorter = a.length < b.length ? a : b;
+    const longer = a.length < b.length ? b : a;
+    return (
+      rowsEqual(shorter, longer.subarray(0, shorter.length)) &&
+      isFiller(longer, shorter.length)
+    );
+  };
+
+  // The key of the padded row, which is what `hashRow` was always given. The
+  // padded bytes are assembled in a scratch row that is reused, since the key
+  // is a string and keeps nothing of it.
+  let scratch = new Uint8Array(0);
+  const keyOf = (bytes: Uint8Array, padBytes: number): string => {
+    if (padBytes === 0) return hashRow(bytes);
+    const length = bytes.length + padBytes;
+    if (scratch.length !== length) scratch = new Uint8Array(length);
+    scratch.set(bytes);
+    scratch.fill(FILLER, bytes.length);
+    return hashRow(scratch);
+  };
+
+  return (row, padBytes) => {
+    const rowFingerprint = fingerprint(row, padBytes);
     let group = groups.get(rowFingerprint);
     if (group === undefined) {
       group = { candidates: [], byContents: null };
@@ -190,7 +268,7 @@ export function createInterner({
     // Too many rows sample alike to keep comparing them, so they are keyed by
     // their full contents instead. Costs what hashing every row used to.
     if (group.byContents !== null) {
-      const key = hashRow(bytes);
+      const key = keyOf(bytes, padBytes);
       let id = group.byContents.get(key);
       if (id === undefined) {
         id = nextId;
@@ -201,7 +279,9 @@ export function createInterner({
     }
 
     for (const candidate of group.candidates) {
-      if (rowsEqual(candidate.bytes, bytes)) return candidate.id;
+      if (paddedEqual(candidate.bytes, candidate.padBytes, bytes, padBytes)) {
+        return candidate.id;
+      }
     }
 
     const id = nextId;
@@ -209,14 +289,17 @@ export function createInterner({
 
     if (group.candidates.length >= MAX_CANDIDATES) {
       group.byContents = new Map(
-        group.candidates.map(candidate => [hashRow(candidate.bytes), candidate.id]),
+        group.candidates.map(candidate => [
+          keyOf(candidate.bytes, candidate.padBytes),
+          candidate.id,
+        ]),
       );
-      group.byContents.set(hashRow(bytes), id);
+      group.byContents.set(keyOf(bytes, padBytes), id);
       group.candidates = [];
       return id;
     }
 
-    group.candidates.push({ bytes, id });
+    group.candidates.push({ bytes, padBytes, id });
     return id;
   };
 }
@@ -636,23 +719,39 @@ function reconstructImages(
   return { out1, out2, injected1, injected2 };
 }
 
+/**
+ * How `align` keys each image's rows, and how much padding each image's rows
+ * are short of. Rows are padded either in memory, and `padBytes` is 0, or only
+ * as far as `key` and the rest of the aligner are concerned.
+ */
+interface RowSource {
+  rows: Uint8ClampedArray[];
+  padBytes: number;
+  key: (
+    row: Uint8ClampedArray,
+    index: number,
+    rows: Uint8ClampedArray[],
+  ) => RowKey;
+}
+
 function align({
-  image1Data,
-  image2Data,
+  image1,
+  image2,
   maxWidth,
-  hashFunction,
   alignment,
 }: {
-  image1Data: Uint8ClampedArray[];
-  image2Data: Uint8ClampedArray[];
+  image1: RowSource;
+  image2: RowSource;
   maxWidth: number;
-  hashFunction: HashFunction;
   alignment?: RowAlignment;
 }): {
   injected1: Set<number>;
   injected2: Set<number>;
   alignment: RowAlignment;
 } {
+  const image1Data = image1.rows;
+  const image2Data = image2.rows;
+
   // A caller that kept the runs from an earlier call skips straight to
   // applying them. Everything between here and `reconstructImages` -- hashing
   // every row, interning, the LCS, simplification -- is the search for an
@@ -670,12 +769,7 @@ function align({
     // segments. Cheap, and it is what keeps `[op, count]` a faithful
     // representation rather than an approximate one.
     simplifySegments(storedSegments, SIMPLIFY_THRESHOLD);
-    const stored = applySegments(
-      storedSegments,
-      image1Data,
-      image2Data,
-      maxWidth,
-    );
+    const stored = applySegments(storedSegments, image1, image2, maxWidth);
     return { ...stored, alignment };
   }
 
@@ -685,8 +779,8 @@ function align({
     return { injected1: new Set(), injected2: new Set(), alignment: [] };
   }
 
-  const hashedImage1Data = image1Data.map(hashFunction);
-  const hashedImage2Data = image2Data.map(hashFunction);
+  const hashedImage1Data = image1Data.map(image1.key);
+  const hashedImage2Data = image2Data.map(image2.key);
 
   const [unique1, unique2] = toUniqueHashes(hashedImage1Data, hashedImage2Data);
   alignArrays(unique1, unique2);
@@ -700,7 +794,7 @@ function align({
   simplifySegments(segments, SIMPLIFY_THRESHOLD);
 
   return {
-    ...applySegments(segments, image1Data, image2Data, maxWidth),
+    ...applySegments(segments, image1, image2, maxWidth),
     alignment: alignmentRuns,
   };
 }
@@ -793,12 +887,14 @@ function assertAlignmentFits(
  */
 function applySegments(
   segments: Segment[],
-  image1Data: Uint8ClampedArray[],
-  image2Data: Uint8ClampedArray[],
+  image1: RowSource,
+  image2: RowSource,
   maxWidth: number,
 ): { injected1: Set<number>; injected2: Set<number> } {
-  const image1Bg = image1Data[0].slice(0, 4);
-  const image2Bg = image2Data[0].slice(0, 4);
+  const image1Data = image1.rows;
+  const image2Data = image2.rows;
+  const image1Bg = firstPixel(image1Data[0], image1.padBytes);
+  const image2Bg = firstPixel(image2Data[0], image2.padBytes);
 
   const { out1, out2, injected1, injected2 } = reconstructImages(
     segments, image1Data, image2Data, image1Bg, image2Bg, maxWidth,
@@ -815,13 +911,31 @@ function applySegments(
   return { injected1, injected2 };
 }
 
-/** Replace `rows` in place with the same rows packed into one buffer. */
+/**
+ * The first pixel of `row` once padded, which is the one an injected line is
+ * tinted from. Only an image with no columns at all has it in its padding.
+ */
+function firstPixel(
+  row: Uint8ClampedArray,
+  padBytes: number,
+): Uint8ClampedArray {
+  if (row.length >= 4 || padBytes === 0) return row.slice(0, 4);
+  const pixel = new Uint8ClampedArray(4).fill(FILLER);
+  pixel.set(row);
+  return pixel;
+}
+
+/**
+ * Replace `rows` in place with the same rows packed into one buffer, each
+ * `rowBytes` long. Rows that are short of that are padded here.
+ */
 function materialize(
   rows: Uint8ClampedArray[],
   input: ImageInput['data'],
+  rowBytes: number,
 ): void {
   const borrowed = ArrayBuffer.isView(input) ? input.buffer : undefined;
-  const packed = packRows(rows, borrowed);
+  const packed = packRows(rows, borrowed, rowBytes);
   if (packed === rows) {
     return;
   }
@@ -832,6 +946,11 @@ function materialize(
 export interface ComputeAndInjectDiffsOptions {
   image1: ImageInput;
   image2: ImageInput;
+  /**
+   * Keys each row for the aligner. It is handed every row padded out to the
+   * wider image's width. An interner from `createInterner` is recognised and
+   * aligns the narrower image without a padded copy of it being made.
+   */
   hashFunction?: HashFunction;
   /**
    * An alignment from an earlier call on the same two images, which is applied
@@ -888,24 +1007,51 @@ export default function computeAndInjectDiffs({
 }: ComputeAndInjectDiffsOptions): ComputeAndInjectDiffsResult {
   const maxWidth = Math.max(image1.width, image2.width);
 
-  const image1Data = imageTo2DArray(image1, maxWidth - image1.width);
-  const image2Data = imageTo2DArray(image2, maxWidth - image2.width);
+  // The narrower image is aligned as if padded to `maxWidth`. An interner can
+  // do that without the padding being there, and a stored alignment hashes
+  // nothing at all, so either way its rows stay views of the caller's pixels
+  // and are padded once, by `materialize`. A caller's own hash is handed the
+  // padded rows, so for that they are copied with their padding up front.
+  const intern = paddedInterns.get(hashFunction);
+  const padUpFront = intern === undefined && storedAlignment === undefined;
+
+  const source = (image: ImageInput): RowSource => {
+    const padBytes = (maxWidth - image.width) * 4;
+    if (padUpFront) {
+      return {
+        rows: imageTo2DArray(image, maxWidth - image.width),
+        padBytes: 0,
+        key: hashFunction,
+      };
+    }
+    return {
+      rows: imageTo2DArray(image, 0),
+      padBytes,
+      key: intern ? row => intern(row, padBytes) : hashFunction,
+    };
+  };
+
+  const rows1 = source(image1);
+  const rows2 = source(image2);
 
   const { injected1, injected2, alignment } = align({
-    image1Data,
-    image2Data,
+    image1: rows1,
+    image2: rows2,
     maxWidth,
-    hashFunction,
     alignment: storedAlignment,
   });
 
+  const image1Data = rows1.rows;
+  const image2Data = rows2.rows;
+
   // Write each aligned image into one buffer of its own, now that it is known
-  // which rows it holds. This is the only full-size copy made of either image:
-  // the rows aligned above are views of the caller's pixels where no padding
-  // was needed, and are copied here rather than handed back. A padded image
-  // whose rows did not move is already in a buffer of its own and is kept.
-  materialize(image1Data, image1.data);
-  materialize(image2Data, image2.data);
+  // which rows it holds, padding the narrower one as it goes. This is the only
+  // full-size copy made of either image: the rows aligned above are views of
+  // the caller's pixels, and are copied here rather than handed back. An image
+  // padded up front for a caller's own hash whose rows did not move is already
+  // in a buffer of its own and is kept.
+  materialize(image1Data, image1.data, maxWidth * 4);
+  materialize(image2Data, image2.data, maxWidth * 4);
 
   return {
     image1Data,
