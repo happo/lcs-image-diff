@@ -1,3 +1,8 @@
+import {
+  ALIGNMENT_REPLAY_STAMP,
+  canReplayAlignment,
+} from './alignmentReplay.ts';
+import type { AlignmentReplayStamp } from './alignmentReplay.ts';
 import { DIFF_TRACE_PADDING } from './constants.ts';
 import computeAndInjectDiffs from './computeAndInjectDiffs.ts';
 import type { HashFunction, ImageInput } from './computeAndInjectDiffs.ts';
@@ -7,6 +12,17 @@ import type { ChangedPixelOptions } from './createDiffImage.ts';
 import type DiffTrace from './DiffTrace.ts';
 
 export { DIFF_TRACE_PADDING };
+export {
+  ALIGNMENT_REPLAY_STAMP,
+  canReplayAlignment,
+  OLDEST_REPLAYABLE_REVISION,
+  REPLAY_REVISION,
+  REPLAYABLE_FROM_REVISION,
+} from './alignmentReplay.ts';
+export type {
+  AlignmentReplayStamp,
+  ReplayerRevisions,
+} from './alignmentReplay.ts';
 
 export type { ColorLike, Rgba } from './compose.ts';
 export type { RowKey } from './alignArrays.ts';
@@ -29,6 +45,13 @@ export interface ImageDiffOptions extends ChangedPixelOptions {
    * of being searched for again. See `ComputeAndInjectDiffsOptions`.
    */
   alignment?: RowAlignment;
+  /**
+   * What was stored with `alignment`: its `AlignmentReplayStamp`, or for one
+   * stored before there were stamps, the version that produced it. When given,
+   * an alignment this build would not replay exactly is refused with an error
+   * rather than composed into a wrong image. See `canReplayAlignment`.
+   */
+  alignmentStamp?: AlignmentReplayStamp | string;
 }
 
 export interface ImageDiffResult {
@@ -40,6 +63,8 @@ export interface ImageDiffResult {
   trace: DiffTrace;
   /** How the rows lined up. Worth keeping; see `RowAlignment`. */
   alignment: RowAlignment;
+  /** What to keep with `alignment` to replay it later. */
+  alignmentStamp: Readonly<AlignmentReplayStamp>;
 }
 
 export default function imageDiff(
@@ -48,10 +73,22 @@ export default function imageDiff(
   {
     hashFunction,
     alignment: storedAlignment,
+    alignmentStamp,
     threshold,
     ignoreAntialiasing,
   }: ImageDiffOptions = {},
 ): ImageDiffResult {
+  if (
+    storedAlignment !== undefined &&
+    alignmentStamp !== undefined &&
+    !canReplayAlignment(alignmentStamp)
+  ) {
+    throw new Error(
+      `This build of lcs-image-diff cannot replay an alignment stamped ` +
+        `${JSON.stringify(alignmentStamp)} exactly`,
+    );
+  }
+
   const { image1Data, image2Data, alignment } = computeAndInjectDiffs({
     image1,
     image2,
@@ -77,6 +114,7 @@ export default function imageDiff(
     trace,
     maxDiff: differentDimensions ? 1 : maxDiff,
     alignment,
+    alignmentStamp: ALIGNMENT_REPLAY_STAMP,
   };
 }
 

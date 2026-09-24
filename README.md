@@ -138,6 +138,40 @@ document.getElementById('#trace-svg').style.margin = `0 ${DIFF_TRACE_PADDING}px`
 `imageDiff.DIFF_TRACE_PADDING` still works, but is deprecated and will be
 removed in the next major.
 
+## Replaying a stored alignment
+
+Finding how the rows of two images line up is the expensive part of a diff.
+`imageDiff` returns it as `alignment`, and you can hand it back for the same
+two images to skip the search:
+
+```js
+const first = imageDiff(image1, image2);
+// ...store first.alignment and first.alignmentStamp...
+const again = imageDiff(image1, image2, {
+  alignment: storedAlignment,
+  alignmentStamp: storedStamp,
+});
+```
+
+An alignment only replays exactly on a build that reads its runs the same way.
+Store `alignmentStamp` with it and pass it back: an alignment this build would
+read differently is refused with an error instead of being composed into a
+wrong image. To decide before loading the library, ask the dependency-free
+entry point:
+
+```js
+import { canReplayAlignment } from 'lcs-image-diff/alignmentReplay.js';
+
+if (canReplayAlignment(storedStamp)) {
+  // replay
+}
+```
+
+The stamp is not a package version, so a release that changes only how an
+alignment is found keeps replaying the alignments stored before it, in both
+directions. For an alignment stored before stamps existed (4.3.0 to 4.4.2),
+pass the version string that produced it instead of a stamp.
+
 ## Authors
 
 - Henric Trotzig ([@trotzig](https://github.com/trotzig))

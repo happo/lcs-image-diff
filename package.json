@@ -18,6 +18,10 @@
       "types": "./dist/colorDelta.d.ts",
       "default": "./dist/colorDelta.js"
     },
+    "./alignmentReplay.js": {
+      "types": "./dist/alignmentReplay.d.ts",
+      "default": "./dist/alignmentReplay.js"
+    },
     "./antialiasing.js": {
       "types": "./dist/antialiasing.d.ts",
       "default": "./dist/antialiasing.js"

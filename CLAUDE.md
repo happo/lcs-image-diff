@@ -17,6 +17,7 @@ src/
   compose.ts                # Alpha blending (integer math)
   DiffTrace.ts              # SVG outline generation via imagetracerjs
   similarEnough.ts          # Early-exit: skip LCS if >70% similar
+  alignmentReplay.ts        # Which builds replay a stored alignment exactly
   constants.ts              # DIFF_TRACE_PADDING
   imagetracerjs.d.ts        # Types for the untyped `imagetracerjs` dependency
   __tests__/                # Jest unit + snapshot tests
@@ -80,6 +81,8 @@ does.
 
 **No allocation per pixel** (`createDiffImage.ts`, `getDiffPixel.ts`): the diff loop writes each pixel into the output with `writeDiffPixel` rather than building arrays through `compose`. A tall page is tens of millions of pixels, and a couple of small arrays each kept V8's garbage collector busy enough to dominate the diff -- and made its speed depend on how large the rest of the heap happened to be. Only pixels drawn with the faint "uncounted" tint still go through `compose`.
 
+**Replaying a stored alignment** (`alignmentReplay.ts`): a replay reads the runs, applies `simplifySegments` and rebuilds the images; the search (row keying, `similarEnough`, `alignArrays`) never runs. So only a change to how runs are *read* changes what a stored alignment replays to, and only that bumps `REPLAY_REVISION`. Consumers store `ALIGNMENT_REPLAY_STAMP` (`{ revision, replayableFrom }`) with each alignment and ask `canReplayAlignment` before replaying, which keeps version lists out of every consumer. When you bump `REPLAY_REVISION`: raise `OLDEST_REPLAYABLE_REVISION` with it unless the old way of reading runs is kept alongside the new, and raise `REPLAYABLE_FROM_REVISION` unless older builds read the new runs correctly (for example, it teaches this build to read something it never writes). `STAMP_FOR_UNSTAMPED_VERSION` covers releases from before stamps existed and is closed; never add to it.
+
 **Diff colors**: Magenta `#C52772` = changed pixels, Green `#6A8500` = added rows.
 
 ## Testing
@@ -123,7 +126,7 @@ Return value: `{ data: Uint8ClampedArray, width, height, diff: number (0–1), t
 major -- the deprecation is written on its own const in `index.ts` so that it
 reaches the emitted declaration.
 
-Three modules are exported individually. They are listed one by one in
+Four modules are exported individually. They are listed one by one in
 `exports` rather than matched by a wildcard, so the public surface is only
 what callers actually import -- adding another means adding an entry.
 
@@ -131,6 +134,7 @@ what callers actually import -- adding another means adding an entry.
 import computeAndInjectDiffs from 'lcs-image-diff/computeAndInjectDiffs.js';
 import { colorDeltaChannels } from 'lcs-image-diff/colorDelta.js';
 import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
+import { canReplayAlignment } from 'lcs-image-diff/alignmentReplay.js';
 ```
 
 The first two are also reachable under a `src/` prefix, which predates this package
