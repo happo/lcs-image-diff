@@ -1,6 +1,7 @@
 import { asPixelWords, isAntialiased } from './antialiasing.ts';
 import type { Rgba } from './compose.ts';
 import DiffTrace from './DiffTrace.ts';
+import { flatPixels } from './flatRows.ts';
 import getDiffPixel, { getUncountedDiffPixel } from './getDiffPixel.ts';
 
 const GREEN: Rgba = [106, 133, 0, 255];
@@ -8,14 +9,6 @@ const MAGENTA: Rgba = [197, 39, 114, 255];
 
 function getDataIndex(row: number, width: number, index: number): number {
   return width * row + index;
-}
-
-/** Join rows back into one buffer, which the anti-aliasing check reads. */
-function flattenRows(rows: Uint8ClampedArray[]): Uint8ClampedArray {
-  const rowSize = rows[0].length;
-  const flat = new Uint8ClampedArray(rowSize * rows.length);
-  rows.forEach((row, i) => flat.set(row, i * rowSize));
-  return flat;
 }
 
 export interface DiffImage {
@@ -66,10 +59,11 @@ export default function createDiffImage({
   let maxDiff = 0;
 
   // The anti-aliasing check looks at a pixel's neighbours on the rows above
-  // and below, so it needs the images whole rather than as rows. Only built
-  // when asked for, since it copies both images.
+  // and below, so it needs the images whole rather than as rows. The rows
+  // `computeAndInjectDiffs` returns already share one buffer per image, so
+  // this views them where they are; rows from anywhere else are copied.
   const flat = ignoreAntialiasing
-    ? [flattenRows(image1Data), flattenRows(image2Data)]
+    ? [flatPixels(image1Data), flatPixels(image2Data)]
     : undefined;
   const words = flat?.map(asPixelWords);
   const size = { width: width / 4, height };
