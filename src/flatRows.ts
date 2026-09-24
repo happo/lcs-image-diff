@@ -33,13 +33,24 @@ function isContiguous(rows: Uint8ClampedArray[]): boolean {
 
 /**
  * The same rows, as consecutive views of one freshly allocated buffer --
- * or `rows` itself when they already are.
+ * or `rows` itself when they already are and that buffer is not `borrowed`.
+ *
+ * `borrowed` is a buffer the rows may view but must not be handed out on:
+ * the caller's own pixels, which `computeAndInjectDiffs` reads in place
+ * rather than copying, and which a caller writing into the result would
+ * otherwise overwrite.
  *
  * All rows must be the same length. The buffer starts at offset 0, so it is
  * word-aligned and `asPixelWords` can view it without copying.
  */
-export function packRows(rows: Uint8ClampedArray[]): Uint8ClampedArray[] {
-  if (rows.length === 0 || isContiguous(rows)) {
+export function packRows(
+  rows: Uint8ClampedArray[],
+  borrowed?: ArrayBufferLike,
+): Uint8ClampedArray[] {
+  if (
+    rows.length === 0 ||
+    (isContiguous(rows) && rows[0].buffer !== borrowed)
+  ) {
     return rows;
   }
   const rowBytes = rows[0].length;

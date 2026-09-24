@@ -43,6 +43,14 @@ describe('packRows', () => {
     expect(packRows(rows)).toBe(rows);
   });
 
+  it('copies contiguous rows that view a buffer it must not hand out', () => {
+    const flat = new Uint8ClampedArray(16);
+    const rows = [flat.subarray(0, 8), flat.subarray(8)];
+    const packed = packRows(rows, flat.buffer);
+    expect(packed[0].buffer).not.toBe(flat.buffer);
+    expectContiguous(packed);
+  });
+
   it('copies scattered rows into one buffer, in order', () => {
     const rows = [
       new Uint8ClampedArray([1, 2, 3, 4]),
@@ -76,6 +84,37 @@ describe('flatPixels', () => {
 });
 
 describe('computeAndInjectDiffs', () => {
+  it('never hands back rows that share memory with the input', () => {
+    const image1 = stripes(4, 30);
+    const image2 = stripes(4, 36);
+    const original = Array.from(image1.data);
+    const { image1Data, image2Data } = computeAndInjectDiffs({
+      image1,
+      image2,
+    });
+    expect(image1Data[0].buffer).not.toBe(image1.data.buffer);
+    expect(image2Data[0].buffer).not.toBe(image2.data.buffer);
+    image1Data.forEach(row => row.fill(9));
+    expect(Array.from(image1.data)).toEqual(original);
+  });
+
+  it('does not alias the input when nothing moves either', () => {
+    const image1 = solidImage(4, 6, 255);
+    const image2 = solidImage(4, 6, 250);
+    const { image1Data } = computeAndInjectDiffs({ image1, image2 });
+    expect(image1Data[0].buffer).not.toBe(image1.data.buffer);
+  });
+
+  it('does not alias the input when replaying a stored alignment', () => {
+    const image1 = stripes(4, 30);
+    const image2 = stripes(4, 36);
+    const { alignment } = computeAndInjectDiffs({ image1, image2 });
+    const replayed = computeAndInjectDiffs({ image1, image2, alignment });
+    expect(replayed.image1Data[0].buffer).not.toBe(image1.data.buffer);
+    expectContiguous(replayed.image1Data);
+    expectContiguous(replayed.image2Data);
+  });
+
   it('returns each image as views of one buffer when nothing moves', () => {
     const { image1Data, image2Data } = computeAndInjectDiffs({
       image1: solidImage(4, 6, 255),

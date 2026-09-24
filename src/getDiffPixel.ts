@@ -16,6 +16,45 @@ export interface DiffPixel {
   pixel: ColorLike;
 }
 
+/**
+ * Write the diff image's pixel for one pair of pixels into `out` at `i`, for
+ * a pixel that is either unchanged (`diff` 0) or counts as a change.
+ *
+ * Writes rather than returns so the diff loop allocates nothing per pixel.
+ * A tall page is tens of millions of pixels, and an array or two for each
+ * kept the garbage collector busy enough to dominate the whole diff. Each
+ * branch is what `compose` returns over a transparent background, which is
+ * the foreground unchanged.
+ */
+export function writeDiffPixel(
+  out: Uint8ClampedArray | number[],
+  i: number,
+  diff: number,
+  r2: number,
+  g2: number,
+  b2: number,
+  a2: number,
+): void {
+  if (diff === 0) {
+    if (a2 === 0) {
+      out[i] = 0;
+      out[i + 1] = 0;
+      out[i + 2] = 0;
+      out[i + 3] = 0;
+      return;
+    }
+    out[i] = r2;
+    out[i + 1] = g2;
+    out[i + 2] = b2;
+    out[i + 3] = 140;
+    return;
+  }
+  out[i] = 179;
+  out[i + 1] = 54;
+  out[i + 2] = 130;
+  out[i + 3] = 255 * Math.max(0.2, diff);
+}
+
 export default function getDiffPixel(
   r1: number,
   g1: number,
@@ -28,23 +67,9 @@ export default function getDiffPixel(
 ): DiffPixel {
   // Compute a score that represents the difference between 2 pixels
   const diff = Math.abs(colorDeltaChannels(r1, g1, b1, a1, r2, g2, b2, a2));
-  if (diff === 0) {
-    if (a2 === 0) {
-      return {
-        diff,
-        pixel: TRANSPARENT,
-      };
-    }
-    return {
-      diff,
-      pixel: compose([r2, g2, b2, 140], TRANSPARENT),
-    };
-  }
-
-  return {
-    diff,
-    pixel: compose([179, 54, 130, 255 * Math.max(0.2, diff)], TRANSPARENT),
-  };
+  const pixel: number[] = [0, 0, 0, 0];
+  writeDiffPixel(pixel, 0, diff, r2, g2, b2, a2);
+  return { diff, pixel };
 }
 
 /**

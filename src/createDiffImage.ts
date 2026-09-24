@@ -2,7 +2,8 @@ import { asPixelWords, isAntialiased } from './antialiasing.ts';
 import type { Rgba } from './compose.ts';
 import DiffTrace from './DiffTrace.ts';
 import { flatPixels } from './flatRows.ts';
-import getDiffPixel, { getUncountedDiffPixel } from './getDiffPixel.ts';
+import { colorDeltaChannels } from './colorDelta.ts';
+import { getUncountedDiffPixel, writeDiffPixel } from './getDiffPixel.ts';
 
 const GREEN: Rgba = [106, 133, 0, 255];
 const MAGENTA: Rgba = [197, 39, 114, 255];
@@ -69,22 +70,30 @@ export default function createDiffImage({
   const size = { width: width / 4, height };
 
   for (let row = 0; row < height; row += 1) {
+    const row1 = image1Data[row];
+    const row2 = image2Data[row];
+    // A row the alignment added to the previous image (see below).
+    const addedRow = row1[3] === 0 && row1[0] === 1;
+
     // Render image
     for (let index = 0; index < width; index += 4) {
-      const r2 = image2Data[row][index];
-      const g2 = image2Data[row][index + 1];
-      const b2 = image2Data[row][index + 2];
-      const a2 = image2Data[row][index + 3];
+      const r2 = row2[index];
+      const g2 = row2[index + 1];
+      const b2 = row2[index + 2];
+      const a2 = row2[index + 3];
 
-      let { diff, pixel } = getDiffPixel(
-        image1Data[row][index],
-        image1Data[row][index + 1],
-        image1Data[row][index + 2],
-        image1Data[row][index + 3],
-        r2,
-        g2,
-        b2,
-        a2,
+      // Compute a score that represents the difference between 2 pixels
+      const diff = Math.abs(
+        colorDeltaChannels(
+          row1[index],
+          row1[index + 1],
+          row1[index + 2],
+          row1[index + 3],
+          r2,
+          g2,
+          b2,
+          a2,
+        ),
       );
 
       // `diff` and `maxDiff` describe how far apart the images are, so every
@@ -104,24 +113,28 @@ export default function createDiffImage({
           !isAntialiased(flat[1], x, row, size, size, words[1], words[0]);
       }
 
+      const dataIndex = getDataIndex(row, width, index);
+
       if (counted) {
         let diffColor = MAGENTA;
-        if (image1Data[row][3] === 0 && image1Data[row][0] === 1) {
+        if (addedRow) {
           // Pixel is transparent in previous image, which means that a row was
           // added here.
           diffColor = GREEN;
         }
 
         trace.diff({ row, index, color: diffColor });
-      } else if (diff > 0) {
-        pixel = getUncountedDiffPixel(r2, g2, b2, a2);
       }
 
-      const dataIndex = getDataIndex(row, width, index);
-      data[dataIndex + 0] = pixel[0]; // r
-      data[dataIndex + 1] = pixel[1]; // g
-      data[dataIndex + 2] = pixel[2]; // b
-      data[dataIndex + 3] = pixel[3]; // a
+      if (counted || diff === 0) {
+        writeDiffPixel(data, dataIndex, diff, r2, g2, b2, a2);
+      } else {
+        const pixel = getUncountedDiffPixel(r2, g2, b2, a2);
+        data[dataIndex + 0] = pixel[0]; // r
+        data[dataIndex + 1] = pixel[1]; // g
+        data[dataIndex + 2] = pixel[2]; // b
+        data[dataIndex + 3] = pixel[3]; // a
+      }
     }
   }
 
