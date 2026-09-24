@@ -496,3 +496,146 @@ describe('plain array input', () => {
     );
   });
 });
+
+describe('images of different widths', () => {
+  // The narrower image is aligned as if every row carried the filler pixels
+  // `(1, 1, 1, 1)` it is padded with, without those rows being written out.
+  // Whatever it aligns has to be what aligning the padded rows produced, and
+  // `hashRowWithBuffer` still receives padded rows, so it is the oracle.
+  const image = (
+    width: number,
+    height: number,
+    paint: (y: number, x: number) => number[],
+  ): ImageInput => {
+    const data = Buffer.alloc(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        data.set(paint(y, x), (y * width + x) * 4);
+      }
+    }
+    return { data, width, height };
+  };
+
+  const everything = (result: ComputeAndInjectDiffsResult) => ({
+    rows1: result.image1Data.map(row => [...row].join(',')).join('|'),
+    rows2: result.image2Data.map(row => [...row].join(',')).join('|'),
+    injected1: [...result.image1InjectedRows],
+    injected2: [...result.image2InjectedRows],
+    alignment: result.alignment,
+  });
+
+  const filler = [1, 1, 1, 1];
+  const white = [255, 255, 255, 255];
+
+  // Pairs chosen so a narrow row, once padded, is sometimes exactly a wide
+  // row: the wide image's extra columns are painted with the filler.
+  const cases: [string, ImageInput, ImageInput][] = [
+    [
+      'rows shift down',
+      image(6, 30, y => [(y * 7) & 0xff, 0, 0, 255]),
+      image(8, 36, (y, x) => (x >= 6 ? filler : [((y - 6) * 7) & 0xff, 0, 0, 255])),
+    ],
+    [
+      'the wider image is first',
+      image(8, 36, (y, x) => (x >= 6 ? filler : [((y - 6) * 7) & 0xff, 0, 0, 255])),
+      image(6, 30, y => [(y * 7) & 0xff, 0, 0, 255]),
+    ],
+    [
+      'padded rows equal real ones, in a group the fallback takes over',
+      // Rows differ at byte 1, which the sampler skips, so they all share a
+      // fingerprint and the group switches to keying by contents.
+      image(3, 40, (y, x) => (x === 0 ? [0, y & 0xff, 0, 255] : white)),
+      image(5, 46, (y, x) =>
+        x >= 3 ? filler : x === 0 ? [0, (y + 3) & 0xff, 0, 255] : white,
+      ),
+    ],
+    [
+      'the narrow rows end in filler bytes themselves',
+      image(4, 30, (y, x) => (x === 3 ? filler : [(y * 5) & 0xff, 9, 9, 255])),
+      image(6, 34, (y, x) => (x >= 3 ? filler : [((y - 4) * 5) & 0xff, 9, 9, 255])),
+    ],
+    [
+      'the rows mostly correspond already',
+      image(6, 30, y => [(y * 7) & 0xff, 0, 0, 255]),
+      image(9, 30, (y, x) =>
+        x >= 6 || y === 12 ? filler : [(y * 7) & 0xff, 0, 0, 255],
+      ),
+    ],
+    [
+      'the widths differ by one pixel across a wide row',
+      image(700, 24, (y, x) => (x % 61 === y ? [y, 1, 1, 1] : filler)),
+      image(701, 28, (y, x) => ((x % 61) + 3 === y ? [y - 3, 1, 1, 1] : filler)),
+    ],
+  ];
+
+  const interners: [string, InternerOptions | undefined][] = [
+    ['in Node', undefined],
+    [
+      'without Node',
+      { rowsEqual: rowsEqualInJavaScript, hashRow: hashRowWithCharCodes },
+    ],
+  ];
+
+  describe.each(interners)('interning %s', (_name, options) => {
+    it.each(cases)('aligns as the padded rows did when %s', (_case, a, b) => {
+      const exact = computeAndInjectDiffs({
+        image1: a,
+        image2: b,
+        hashFunction: hashRowWithBuffer,
+      });
+      const interned = computeAndInjectDiffs({
+        image1: a,
+        image2: b,
+        ...(options ? { hashFunction: createInterner(options) } : {}),
+      });
+
+      expect(everything(interned)).toEqual(everything(exact));
+    });
+  });
+
+  it('still hands a custom hashFunction the padded rows', () => {
+    const lengths = new Set<number>();
+    const tails = new Set<string>();
+    computeAndInjectDiffs({
+      image1: image(3, 10, () => white),
+      image2: image(5, 12, () => white),
+      hashFunction: row => {
+        lengths.add(row.length);
+        tails.add([...row.slice(3 * 4)].join(','));
+        return hashRowWithBuffer(row);
+      },
+    });
+
+    expect([...lengths]).toEqual([5 * 4]);
+    expect(tails).toEqual(
+      new Set([[...filler, ...filler].join(','), [...white, ...white].join(',')]),
+    );
+  });
+
+  it('pads the narrower image when replaying a stored alignment', () => {
+    const [, a, b] = cases[0];
+    const computed = computeAndInjectDiffs({ image1: a, image2: b });
+    const replayed = computeAndInjectDiffs({
+      image1: a,
+      image2: b,
+      alignment: computed.alignment,
+    });
+
+    expect(everything(replayed)).toEqual(everything(computed));
+    expect(replayed.image1Data[0].length).toBe(8 * 4);
+  });
+
+  it('takes the background from the padding when the narrower image has no columns', () => {
+    const exact = computeAndInjectDiffs({
+      image1: image(0, 20, () => white),
+      image2: image(2, 26, (y, x) => (x === 0 && y === 4 ? [9, 9, 9, 255] : filler)),
+      hashFunction: hashRowWithBuffer,
+    });
+    const interned = computeAndInjectDiffs({
+      image1: image(0, 20, () => white),
+      image2: image(2, 26, (y, x) => (x === 0 && y === 4 ? [9, 9, 9, 255] : filler)),
+    });
+
+    expect(everything(interned)).toEqual(everything(exact));
+  });
+});

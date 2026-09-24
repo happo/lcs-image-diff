@@ -51,6 +51,25 @@ describe('packRows', () => {
     expectContiguous(packed);
   });
 
+  it('pads rows narrower than the width asked for with filler', () => {
+    const flat = new Uint8ClampedArray([1, 2, 3, 4, 5, 6, 7, 8]);
+    const rows = [flat.subarray(0, 4), new Uint8ClampedArray([9, 9, 9, 9, 9, 9, 9, 9])];
+    const packed = packRows(rows, flat.buffer, 8);
+    expectContiguous(packed);
+    expect(packed.map(row => Array.from(row))).toEqual([
+      [1, 2, 3, 4, 1, 1, 1, 1],
+      [9, 9, 9, 9, 9, 9, 9, 9],
+    ]);
+  });
+
+  it('copies contiguous rows that are narrower than the width asked for', () => {
+    const flat = new Uint8ClampedArray(8);
+    const rows = [flat.subarray(0, 4), flat.subarray(4)];
+    const packed = packRows(rows, undefined, 8);
+    expect(packed).not.toBe(rows);
+    expect(packed[0].length).toBe(8);
+  });
+
   it('copies scattered rows into one buffer, in order', () => {
     const rows = [
       new Uint8ClampedArray([1, 2, 3, 4]),
@@ -142,6 +161,55 @@ describe('computeAndInjectDiffs', () => {
     });
     expectContiguous(image1Data);
     expectContiguous(image2Data);
+  });
+});
+
+describe('computeAndInjectDiffs, counting what it allocates', () => {
+  // Every buffer of at least `minBytes` created while `run` runs. Views onto
+  // an existing buffer are not allocations and are not counted.
+  function bigAllocations(minBytes: number, run: () => void): number[] {
+    const Original = globalThis.Uint8ClampedArray;
+    const sizes: number[] = [];
+    class Counting extends Original {
+      constructor(...args: unknown[]) {
+        // @ts-expect-error -- forwards whichever overload was called
+        super(...args);
+        if (!ArrayBuffer.isView(args[0]) && !(args[0] instanceof ArrayBuffer) &&
+          this.byteLength >= minBytes) {
+          sizes.push(this.byteLength);
+        }
+      }
+    }
+    globalThis.Uint8ClampedArray = Counting as typeof Uint8ClampedArray;
+    try {
+      run();
+    } finally {
+      globalThis.Uint8ClampedArray = Original;
+    }
+    return sizes;
+  }
+
+  it('makes one copy of each image when widths differ and rows move', () => {
+    // A `Uint8Array` so the input is read in place even while the clamped
+    // constructor is swapped out.
+    const narrow = stripes(40, 60);
+    const wide = stripes(48, 70, 0);
+    const image1 = { ...narrow, data: new Uint8Array(narrow.data) };
+    const image2 = { ...wide, data: new Uint8Array(wide.data) };
+
+    let result: ReturnType<typeof computeAndInjectDiffs> | undefined;
+    const sizes = bigAllocations(40 * 4 * 60, () => {
+      result = computeAndInjectDiffs({ image1, image2 });
+    });
+
+    const { image1Data, image2Data, image1InjectedRows } = result!;
+    expect(image1InjectedRows.size).toBeGreaterThan(0);
+    expectContiguous(image1Data);
+    expectContiguous(image2Data);
+    // The two packed results, and no padded copy of the narrower image ahead
+    // of them.
+    const packedBytes = image1Data.length * 48 * 4;
+    expect(sizes).toEqual([packedBytes, packedBytes]);
   });
 });
 

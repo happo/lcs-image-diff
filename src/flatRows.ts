@@ -9,13 +9,23 @@
  * second full-size copy of each image while it runs.
  */
 
+/** What rows narrower than their image are padded out with, in every byte. */
+export const FILLER = 1;
+
 /** Whether `rows` are consecutive, equally sized views filling one buffer. */
-function isContiguous(rows: Uint8ClampedArray[]): boolean {
+function isContiguous(
+  rows: Uint8ClampedArray[],
+  rowBytes = rows[0]?.byteLength,
+): boolean {
   if (rows.length === 0) {
     return false;
   }
-  const { buffer, byteOffset, byteLength: rowBytes } = rows[0];
-  if (buffer.byteLength !== rowBytes * rows.length || byteOffset !== 0) {
+  const { buffer, byteOffset } = rows[0];
+  if (
+    rows[0].byteLength !== rowBytes ||
+    buffer.byteLength !== rowBytes * rows.length ||
+    byteOffset !== 0
+  ) {
     return false;
   }
   for (let i = 1; i < rows.length; i++) {
@@ -40,24 +50,31 @@ function isContiguous(rows: Uint8ClampedArray[]): boolean {
  * rather than copying, and which a caller writing into the result would
  * otherwise overwrite.
  *
- * All rows must be the same length. The buffer starts at offset 0, so it is
- * word-aligned and `asPixelWords` can view it without copying.
+ * Each row comes out `rowBytes` long, which defaults to the first row's
+ * length. A row shorter than that is padded on the right with `FILLER`: the
+ * narrower of two images is aligned from rows that view the caller's pixels
+ * as they are, and this is where its padding is first written. No row may be
+ * longer. The buffer starts at offset 0, so it is word-aligned and
+ * `asPixelWords` can view it without copying.
  */
 export function packRows(
   rows: Uint8ClampedArray[],
   borrowed?: ArrayBufferLike,
+  rowBytes = rows[0]?.length,
 ): Uint8ClampedArray[] {
   if (
     rows.length === 0 ||
-    (isContiguous(rows) && rows[0].buffer !== borrowed)
+    (isContiguous(rows, rowBytes) && rows[0].buffer !== borrowed)
   ) {
     return rows;
   }
-  const rowBytes = rows[0].length;
   const flat = new Uint8ClampedArray(rowBytes * rows.length);
   return rows.map((row, i) => {
     const start = i * rowBytes;
     flat.set(row, start);
+    if (row.length < rowBytes) {
+      flat.fill(FILLER, start + row.length, start + rowBytes);
+    }
     return flat.subarray(start, start + rowBytes);
   });
 }
