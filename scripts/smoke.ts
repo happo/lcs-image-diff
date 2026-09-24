@@ -22,6 +22,11 @@ import computeAndInjectDiffs from 'lcs-image-diff/src/computeAndInjectDiffs.js';
 import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
 import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
 import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
+import {
+  ALIGNMENT_REPLAY_STAMP,
+  canReplayAlignment,
+} from 'lcs-image-diff/alignmentReplay.js';
+import { ALIGNMENT_REPLAY_STAMP as viaMainEntry } from 'lcs-image-diff';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -95,5 +100,24 @@ assert.ok(
   !thresholded.trace.data.some(v => v > 0),
   'nothing traced above the largest possible delta',
 );
+
+// A viewer asks whether it can replay a stored alignment before loading the
+// rest of the library, so the check has its own entry point.
+assert.strictEqual(viaMainEntry, ALIGNMENT_REPLAY_STAMP, 'one replay module');
+assert.deepStrictEqual(
+  result.alignmentStamp,
+  ALIGNMENT_REPLAY_STAMP,
+  'imageDiff stamps its alignment',
+);
+assert.strictEqual(
+  canReplayAlignment(result.alignmentStamp),
+  true,
+  'canReplayAlignment via deep import',
+);
+const replayed = imageDiff(image1, image2, {
+  alignment: result.alignment,
+  alignmentStamp: result.alignmentStamp,
+});
+assert.deepStrictEqual(replayed.data, result.data, 'stamped replay');
 
 console.log('smoke: package entry point OK');

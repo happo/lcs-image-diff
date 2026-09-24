@@ -5,7 +5,10 @@ import path from 'path';
 import { describe, expect, it } from '@jest/globals';
 import sharp from 'sharp';
 
-import imageDiff from '../index.ts';
+import imageDiff, {
+  ALIGNMENT_REPLAY_STAMP,
+  REPLAY_REVISION,
+} from '../index.ts';
 import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
 import type { ImageInput, RowAlignment } from '../computeAndInjectDiffs.ts';
 
@@ -369,5 +372,64 @@ describe('the identity alignment', () => {
     expect(
       imageDiff(fresh1, fresh2, { alignment: computed.alignment }).data,
     ).toEqual(computed.data);
+  });
+});
+
+describe('a stamped alignment', () => {
+  it('is stamped by the build that produced it', async () => {
+    const [image1, image2] = await shiftedPair();
+
+    expect(imageDiff(image1, image2).alignmentStamp).toEqual(
+      ALIGNMENT_REPLAY_STAMP,
+    );
+  });
+
+  it('replays when this build reads it the same way', async () => {
+    const [image1, image2] = await shiftedPair();
+    const computed = imageDiff(image1, image2);
+
+    const [fresh1, fresh2] = await shiftedPair();
+    const applied = imageDiff(fresh1, fresh2, {
+      alignment: computed.alignment,
+      alignmentStamp: computed.alignmentStamp,
+    });
+
+    expect(applied.data).toEqual(computed.data);
+  });
+
+  it('replays when stamped with a version from before stamps', async () => {
+    const [image1, image2] = await shiftedPair();
+    const computed = imageDiff(image1, image2);
+
+    const [fresh1, fresh2] = await shiftedPair();
+    const applied = imageDiff(fresh1, fresh2, {
+      alignment: computed.alignment,
+      alignmentStamp: '4.4.2',
+    });
+
+    expect(applied.data).toEqual(computed.data);
+  });
+
+  it('is refused when this build would read it differently', async () => {
+    const [image1, image2] = await shiftedPair();
+    const { alignment } = imageDiff(image1, image2);
+
+    expect(() =>
+      imageDiff(image1, image2, {
+        alignment,
+        alignmentStamp: {
+          revision: REPLAY_REVISION + 1,
+          replayableFrom: REPLAY_REVISION + 1,
+        },
+      }),
+    ).toThrow(/cannot replay an alignment/);
+  });
+
+  it('is only checked when there is an alignment to replay', async () => {
+    const [image1, image2] = await shiftedPair();
+
+    expect(() =>
+      imageDiff(image1, image2, { alignmentStamp: '1.0.0' }),
+    ).not.toThrow();
   });
 });
