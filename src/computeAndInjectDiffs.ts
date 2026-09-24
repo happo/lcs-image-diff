@@ -1,6 +1,7 @@
 import alignArrays, { PLACEHOLDER } from './alignArrays.ts';
 import type { RowKey } from './alignArrays.ts';
 import compose from './compose.ts';
+import { packRows } from './flatRows.ts';
 import type { ColorLike } from './compose.ts';
 import similarEnough from './similarEnough.ts';
 
@@ -44,9 +45,34 @@ function imageTo2DArray(
       ? data
       : Uint8ClampedArray.from(data);
 
+  // Nothing to pad: the rows can be views of the caller's pixels, read in
+  // place. Aligning only reads them, and `computeAndInjectDiffs` writes the
+  // result into a buffer of its own once the alignment is known, so the
+  // caller's pixels are never copied twice or handed back. See `flatRows.ts`.
+  if (padSize === 0 && pixels.length >= rowSize * height) {
+    const view = new Uint8ClampedArray(
+      pixels.buffer,
+      pixels.byteOffset,
+      rowSize * height,
+    );
+    const rows: Uint8ClampedArray[] = [];
+    for (let row = 0; row < height; row += 1) {
+      rows.push(view.subarray(row * rowSize, (row + 1) * rowSize));
+    }
+    return rows;
+  }
+
+  // Padded rows are copies, since the padding is part of what the alignment
+  // hashes. One buffer for the whole image, handed out a row at a time.
+  const paddedRowSize = rowSize + padSize;
+  const flat = new Uint8ClampedArray(paddedRowSize * height);
+
   const newData: Uint8ClampedArray[] = [];
   for (let row = 0; row < height; row += 1) {
-    const pixelsInRow = new Uint8ClampedArray(rowSize + padSize);
+    const pixelsInRow = flat.subarray(
+      row * paddedRowSize,
+      (row + 1) * paddedRowSize,
+    );
     const start = row * rowSize;
 
     // A row that runs past the end of `data` copies what is there and leaves
@@ -778,13 +804,29 @@ function applySegments(
     segments, image1Data, image2Data, image1Bg, image2Bg, maxWidth,
   );
 
-  // Mutate in place to match the existing API contract
+  // Mutate in place to match the existing API contract. The rows are still
+  // views of wherever they came from; `computeAndInjectDiffs` writes them into
+  // one buffer per image once, at the end.
   image1Data.length = 0;
   image2Data.length = 0;
   for (const row of out1) image1Data.push(row);
   for (const row of out2) image2Data.push(row);
 
   return { injected1, injected2 };
+}
+
+/** Replace `rows` in place with the same rows packed into one buffer. */
+function materialize(
+  rows: Uint8ClampedArray[],
+  input: ImageInput['data'],
+): void {
+  const borrowed = ArrayBuffer.isView(input) ? input.buffer : undefined;
+  const packed = packRows(rows, borrowed);
+  if (packed === rows) {
+    return;
+  }
+  rows.length = 0;
+  for (const row of packed) rows.push(row);
 }
 
 export interface ComputeAndInjectDiffsOptions {
@@ -856,6 +898,14 @@ export default function computeAndInjectDiffs({
     hashFunction,
     alignment: storedAlignment,
   });
+
+  // Write each aligned image into one buffer of its own, now that it is known
+  // which rows it holds. This is the only full-size copy made of either image:
+  // the rows aligned above are views of the caller's pixels where no padding
+  // was needed, and are copied here rather than handed back. A padded image
+  // whose rows did not move is already in a buffer of its own and is kept.
+  materialize(image1Data, image1.data);
+  materialize(image2Data, image2.data);
 
   return {
     image1Data,

@@ -13,6 +13,7 @@ src/
   getDiffPixel.ts           # Per-pixel diff computation
   colorDelta.ts             # YIQ perceptual color difference
   antialiasing.ts           # Anti-aliased pixel detection (shared with happo-compare)
+  flatRows.ts               # Rows as views of one buffer, read flat without copying
   compose.ts                # Alpha blending (integer math)
   DiffTrace.ts              # SVG outline generation via imagetracerjs
   similarEnough.ts          # Early-exit: skip LCS if >70% similar
@@ -75,7 +76,9 @@ does.
 
 **Color delta** (`colorDelta.ts`): YIQ NTSC color space (from pixelmatch). Weighted: `0.5053×y² + 0.299×i² + 0.1957×q²`, normalized by `MAX_YIQ_DIFFERENCE`. Sign encodes lighter vs darker.
 
-**Which pixels count** (`createDiffImage.ts`, `antialiasing.ts`): by default any differing pixel is a change. `threshold` and `ignoreAntialiasing` narrow that to happo-compare's rule -- colour delta above the threshold, and not anti-aliasing in either image -- so a viewer given a comparison's settings highlights the pixels that comparison measured. happo-compare imports `isAntialiased` from here rather than keeping its own copy, which is what keeps the two from drifting. A differing pixel that does not count is left out of the trace and drawn faintly tinted instead of in the change colour. `diff` and `maxDiff` still include every differing pixel: they describe how far apart the images are, not what was highlighted.
+**Which pixels count** (`createDiffImage.ts`, `antialiasing.ts`): by default any differing pixel is a change. `threshold` and `ignoreAntialiasing` narrow that to happo-compare's rule -- colour delta above the threshold, and not anti-aliasing in either image -- so a viewer given a comparison's settings highlights the pixels that comparison measured. happo-compare imports `isAntialiased` from here rather than keeping its own copy, which is what keeps the two from drifting. The check reads each image flat (it looks at the rows above and below), so each aligned image comes back as consecutive views of one buffer of its own (`flatRows.ts`), which `createDiffImage` reads in place rather than copying. To get there without an extra copy, `imageTo2DArray` hands out rows that *view the caller's pixels* when no padding is needed; aligning only reads them, and `computeAndInjectDiffs` writes each aligned image into its own buffer once, at the end (`materialize`), so the result never shares memory with the input. Padded rows (images of different widths) are still copied up front, because the padding is part of what the alignment hashes. A differing pixel that does not count is left out of the trace and drawn faintly tinted instead of in the change colour. `diff` and `maxDiff` still include every differing pixel: they describe how far apart the images are, not what was highlighted.
+
+**No allocation per pixel** (`createDiffImage.ts`, `getDiffPixel.ts`): the diff loop writes each pixel into the output with `writeDiffPixel` rather than building arrays through `compose`. A tall page is tens of millions of pixels, and a couple of small arrays each kept V8's garbage collector busy enough to dominate the diff -- and made its speed depend on how large the rest of the heap happened to be. Only pixels drawn with the faint "uncounted" tint still go through `compose`.
 
 **Diff colors**: Magenta `#C52772` = changed pixels, Green `#6A8500` = added rows.
 
