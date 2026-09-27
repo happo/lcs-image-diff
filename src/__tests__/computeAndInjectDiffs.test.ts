@@ -177,7 +177,7 @@ describe('injected rows', () => {
 });
 
 describe('row hashing', () => {
-  // Jest runs under Node, so the module always picks the Buffer
+  // Vitest runs under Node, so the module always picks the Buffer
   // implementation. The other one ships to browsers, so it is tested directly
   // and against its counterpart.
   const both: [string, (row: Uint8ClampedArray) => string][] = [
@@ -325,8 +325,8 @@ describe('row interning', () => {
   });
 
   describe('without Node', () => {
-    // Jest runs under Node, so the default picks the Buffer comparison and the
-    // Buffer hash. Browsers get the other two, and nothing reached them
+    // Vitest runs under Node, so the default picks the Buffer comparison and
+    // the Buffer hash. Browsers get the other two, and nothing reached them
     // through a real alignment. Driving them through `computeAndInjectDiffs`
     // covers interning and its fallback the way a browser would run them.
     const inBrowser = (): HashFunction =>
