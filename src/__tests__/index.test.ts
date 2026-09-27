@@ -2,7 +2,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
 
-import { beforeEach, expect, it } from '@jest/globals';
+import { beforeEach, expect, it } from 'vitest';
 import sharp from 'sharp';
 
 import imageDiff from '../index.ts';

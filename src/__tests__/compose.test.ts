@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import compose from '../compose.ts';
 import type { ColorLike } from '../compose.ts';

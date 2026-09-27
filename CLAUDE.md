@@ -20,7 +20,7 @@ src/
   alignmentReplay.ts        # Which builds replay a stored alignment exactly
   constants.ts              # DIFF_TRACE_PADDING
   imagetracerjs.d.ts        # Types for the untyped `imagetracerjs` dependency
-  __tests__/                # Jest unit + snapshot tests
+  __tests__/                # Vitest unit + snapshot tests (*.test.ts)
 scripts/
   smoke.ts                  # Imports the BUILT package and exercises it
 dist/                       # Build output (git-ignored); what the package ships
@@ -62,10 +62,11 @@ and `node profile.ts` work as they are.
 checks `scripts/smoke.ts` against the built package and so only works after a
 build, which is why it is kept out of `pnpm tsc`.
 
-Tests run through `babel-jest`, which only strips the types -- jest loads the
-result as ESM, so `NODE_OPTIONS=--experimental-vm-modules` is still needed (set
-automatically via the `test` script). Babel does not type check; `pnpm tsc`
-does.
+Tests run under Vitest (`vitest.config.ts`), which compiles the `.ts` itself
+rather than going through Node's type stripping. Its compiler accepts syntax
+Node refuses and resolves a `./foo.js` import to `foo.ts`, and it does not type
+check -- so a green test run says nothing about whether Node can load the
+sources. `pnpm tsc` does.
 
 ## Key Algorithms
 
@@ -147,7 +148,7 @@ so none of them can break silently.
 - `imagetracerjs` — raster-to-SVG for `DiffTrace` (untyped; see `src/imagetracerjs.d.ts`)
 - `typescript` (dev) — v7, the native compiler
 - `sharp` (dev) — PNG loading in tests
-- `jest` (dev) — test runner, with `babel-jest` + `@babel/preset-typescript`
+- `vitest` (dev) — test runner, with `vite` as its peer dependency
 
 Dependency versions are subject to the `minimumReleaseAge` cooldown in
 `pnpm-workspace.yaml`, so a range whose only match is a package published in the

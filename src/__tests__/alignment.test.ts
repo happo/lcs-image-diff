@@ -2,7 +2,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
 
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 
 import imageDiff, {
@@ -269,7 +269,7 @@ describe('validating runs that came from storage', () => {
     ).toThrow(/Unknown alignment operation/);
   });
 
-  it.each([0, -4, 2.5, NaN])('refuses a length of %p', length => {
+  it.each([0, -4, 2.5, NaN])('refuses a length of %s', length => {
     const image1 = rowsImage([[10, 20]]);
     const image2 = rowsImage([[20, 20]]);
 

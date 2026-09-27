@@ -11,17 +11,13 @@ updates:
     groups:
       # An update joins the FIRST group it matches, so these have to come
       # before the catch-all below -- otherwise it takes their patches and
-      # minors and these only ever see majors. Both toolchains have to move
+      # minors and these only ever see majors. vitest and vite have to move
       # in lockstep, which is the whole reason for grouping them.
-      babel:
+      vitest:
         patterns:
-          - '@babel/*'
-          - 'babel-*'
-
-      jest:
-        patterns:
-          - 'jest'
-          - '@jest/*'
+          - 'vitest'
+          - '@vitest/*'
+          - 'vite'
 
       patches-and-minors:
         update-types:

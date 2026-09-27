@@ -3,7 +3,7 @@ import { dirname } from 'path';
 import path from 'path';
 import crypto from 'crypto';
 
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { beforeEach, describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 
 import computeAndInjectDiffs, {
