@@ -87,7 +87,7 @@ does.
 
 ## Testing
 
-Unit tests cover each module individually. `snapshots-test.ts` does visual regression: loads `before.png` + `after.png` from subdirectories of `snapshots/`, runs `imageDiff`, MD5-hashes the output and compares to `diff.png`. The `diff.png` files are committed to the repo. If `diff.png` is missing, it is auto-generated on first run.
+Unit tests cover each module individually. `snapshots.test.ts` does visual regression: loads `before.png` + `after.png` from subdirectories of `snapshots/`, runs `imageDiff`, MD5-hashes the output and compares to `diff.png`. The `diff.png` files are committed to the repo. If `diff.png` is missing, it is auto-generated on first run.
 
 To regenerate all snapshot baselines: delete all `diff.png` files and run `pnpm test`.
 
