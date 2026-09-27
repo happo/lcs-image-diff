@@ -55,7 +55,7 @@
     "build": "tsc -p tsconfig.build.json",
     "smoke": "tsc -p tsconfig.smoke.json && node scripts/smoke.ts",
     "prepack": "pnpm run build",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "vitest run",
     "tsc": "tsc",
     "release": "set -a && source .env && set +a && release-with-ease",
     "serve": "node server.ts",
@@ -73,14 +73,11 @@
     "imagetracerjs": "^1.2.6"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
-    "@babel/preset-typescript": "^7.29.7",
-    "@jest/globals": "^30.5.1",
     "@types/node": "^24.13.5",
-    "babel-jest": "^30.5.1",
-    "jest": "^30.5.1",
     "release-with-ease": "2.7.2",
     "sharp": "^0.35.4",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
   }
 }

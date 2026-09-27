@@ -4,7 +4,7 @@ import childProcess from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-import { describe, expect, it, jest } from '@jest/globals';
+import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 
 import imageDiff from '../index.ts';
@@ -18,9 +18,7 @@ const snapshots = childProcess
   .split(/\n/)
   .filter(Boolean);
 
-jest.setTimeout(60000);
-
-describe('snapshot tests', () => {
+describe('snapshot tests', { timeout: 60000 }, () => {
   snapshots.forEach(snapshot => {
     it(snapshot, async () => {
       const pathToBefore = path.resolve('snapshots', snapshot, 'before.png');

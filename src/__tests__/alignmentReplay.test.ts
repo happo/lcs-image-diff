@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it } from 'vitest';
 
 import {
   ALIGNMENT_REPLAY_STAMP,
@@ -36,7 +36,7 @@ describe('alignments stored before there were stamps', () => {
   );
 
   it.each(['4.2.0', '3.0.0', '4.5.0', '', 'toString'])(
-    'does not replay one produced by %p',
+    'does not replay one produced by %o',
     version => {
       expect(canReplayAlignment(version)).toBe(false);
     },
@@ -53,7 +53,7 @@ describe('stamps that came from storage', () => {
     { revision: 1.5, replayableFrom: 1 },
     { revision: 0, replayableFrom: 0 },
     { revision: 1, replayableFrom: 2 },
-  ])('refuses %p', stamp => {
+  ])('refuses %o', stamp => {
     expect(
       canReplayAlignment(stamp as AlignmentReplayStamp | null | undefined),
     ).toBe(false);

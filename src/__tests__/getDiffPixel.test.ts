@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { colorDeltaChannels } from '../colorDelta.ts';
 import compose from '../compose.ts';
