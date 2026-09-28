@@ -38,6 +38,7 @@ pnpm test <test_file_name>                         # Run a single test file
 pnpm test -t <matching_string> <test_file_name>    # Run a single describe/test block
 pnpm tsc                                           # Type check everything (no emit)
 pnpm lint                                          # ESLint (eslint.config.ts)
+pnpm format                                        # Prettier (config in package.json)
 pnpm run build                                     # Emit dist/ from src/
 pnpm run smoke                                     # Check the built package
 pnpm run serve                                     # Dev server at http://localhost:3456

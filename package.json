@@ -60,17 +60,17 @@
     "test": "vitest run",
     "tsc": "tsc",
     "lint": "eslint .",
+    "format": "prettier --write .",
     "release": "set -a && source .env && set +a && release-with-ease",
     "serve": "node server.ts",
     "profile": "node profile.ts"
   },
   "prettier": {
-    "trailingComma": "all",
-    "tabWidth": 2,
-    "semi": true,
+    "printWidth": 100,
     "singleQuote": true,
-    "printWidth": 80,
-    "arrowParens": "avoid"
+    "trailingComma": "all",
+    "arrowParens": "always",
+    "proseWrap": "never"
   },
   "dependencies": {
     "imagetracerjs": "^1.2.6"
@@ -84,6 +84,7 @@
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-unicorn": "^74.0.0",
     "jiti": "^2.7.0",
+    "prettier": "^3.9.9",
     "release-with-ease": "^2.8.0",
     "sharp": "^0.35.4",
     "typescript": "^6.0.3",
