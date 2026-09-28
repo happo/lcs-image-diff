@@ -118,7 +118,9 @@ function imageDiff(
 
 // Declared rather than left to be inferred from the assignment below, so the
 // deprecation reaches the emitted declaration: TypeScript 6 drops a comment
-// written on the assignment itself. It is ambient, so it emits no code.
+// written on the assignment itself. It is ambient, so it emits no code. Its
+// type comes from the const so it stays the literal `10`, as the named export
+// is; inferred from the assignment it would widen to `number`.
 // eslint-disable-next-line @typescript-eslint/no-namespace -- see above
 declare namespace imageDiff {
   /**
@@ -126,7 +128,7 @@ declare namespace imageDiff {
    * `import { DIFF_TRACE_PADDING } from 'lcs-image-diff'`. Hanging it off the
    * function is kept for back-compat and goes away in the next major.
    */
-  let DIFF_TRACE_PADDING: number;
+  let DIFF_TRACE_PADDING: typeof import('./constants.ts').DIFF_TRACE_PADDING;
 }
 
 imageDiff.DIFF_TRACE_PADDING = DIFF_TRACE_PADDING;
