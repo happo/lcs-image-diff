@@ -53,7 +53,6 @@
     "url": "https://github.com/happo/lcs-image-diff.git"
   },
   "license": "MIT",
-  "packageManager": "pnpm",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "smoke": "tsc -p tsconfig.smoke.json && node scripts/smoke.ts",
