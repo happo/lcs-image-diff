@@ -46,10 +46,7 @@ export function colorDeltaChannels(
     return 0;
   }
 
-  if (
-    (isFillerPixel(r1, g1, b1, a1) && a1 > 0) ||
-    (isFillerPixel(r2, g2, b2, a2) && a2 > 0)
-  ) {
+  if ((isFillerPixel(r1, g1, b1, a1) && a1 > 0) || (isFillerPixel(r2, g2, b2, a2) && a2 > 0)) {
     return 1;
   }
 
@@ -73,8 +70,7 @@ export function colorDeltaChannels(
   const i = rgb2i(r1, g1, b1) - rgb2i(r2, g2, b2);
   const q = rgb2q(r1, g1, b1) - rgb2q(r2, g2, b2);
 
-  const delta =
-    (0.5053 * y * y + 0.299 * i * i + 0.1957 * q * q) / MAX_YIQ_DIFFERENCE;
+  const delta = (0.5053 * y * y + 0.299 * i * i + 0.1957 * q * q) / MAX_YIQ_DIFFERENCE;
 
   // encode whether the pixel lightens or darkens in the sign
   return y1 > y2 ? -delta : delta;

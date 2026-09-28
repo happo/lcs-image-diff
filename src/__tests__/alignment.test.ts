@@ -6,10 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ImageInput, RowAlignment } from '../computeAndInjectDiffs.ts';
 import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
-import imageDiff, {
-  ALIGNMENT_REPLAY_STAMP,
-  REPLAY_REVISION,
-} from '../index.ts';
+import imageDiff, { ALIGNMENT_REPLAY_STAMP, REPLAY_REVISION } from '../index.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -84,12 +81,8 @@ describe('applying a stored alignment', () => {
       expect(applied.image1Data[row]).toEqual(computed.image1Data[row]);
       expect(applied.image2Data[row]).toEqual(computed.image2Data[row]);
     }
-    expect([...applied.image1InjectedRows]).toEqual([
-      ...computed.image1InjectedRows,
-    ]);
-    expect([...applied.image2InjectedRows]).toEqual([
-      ...computed.image2InjectedRows,
-    ]);
+    expect([...applied.image1InjectedRows]).toEqual([...computed.image1InjectedRows]);
+    expect([...applied.image2InjectedRows]).toEqual([...computed.image2InjectedRows]);
   });
 
   it('produces the same diff image as computing it', async () => {
@@ -117,7 +110,6 @@ describe('applying a stored alignment', () => {
       }),
     ).toThrow(/Unknown alignment operation/);
   });
-
 });
 
 describe('the runs themselves', () => {
@@ -159,7 +151,7 @@ function rowsImage(runs: Array<[number, number]>): ImageInput {
 
 /** The first byte of each row, which `rowsImage` makes the row's identity. */
 function rowValues(rows: Array<Uint8ClampedArray>): Array<number> {
-  return rows.map(row => row[0]);
+  return rows.map((row) => row[0]);
 }
 
 describe('an alignment that simplification rewrites', () => {
@@ -195,12 +187,8 @@ describe('an alignment that simplification rewrites', () => {
 
     // Counts alone described this wrongly while the runs were taken after
     // simplification: ten rows came back holding the wrong content.
-    expect(rowValues(applied.image1Data)).toEqual(
-      rowValues(computed.image1Data),
-    );
-    expect(rowValues(applied.image2Data)).toEqual(
-      rowValues(computed.image2Data),
-    );
+    expect(rowValues(applied.image1Data)).toEqual(rowValues(computed.image1Data));
+    expect(rowValues(applied.image2Data)).toEqual(rowValues(computed.image2Data));
   });
 
   it('reports both gaps rather than the combined one', () => {
@@ -268,7 +256,7 @@ describe('validating runs that came from storage', () => {
     ).toThrow(/Unknown alignment operation/);
   });
 
-  it.each([0, -4, 2.5, NaN])('refuses a length of %s', length => {
+  it.each([0, -4, 2.5, NaN])('refuses a length of %s', (length) => {
     const image1 = rowsImage([[10, 20]]);
     const image2 = rowsImage([[20, 20]]);
 
@@ -336,12 +324,11 @@ describe('the identity alignment', () => {
   });
 
   it('leaves equal-height images untouched', () => {
-    const { image1Data, image2Data, image1InjectedRows } =
-      computeAndInjectDiffs({
-        image1: rowsImage([[10, 20]]),
-        image2: rowsImage([[20, 20]]),
-        alignment: [],
-      });
+    const { image1Data, image2Data, image1InjectedRows } = computeAndInjectDiffs({
+      image1: rowsImage([[10, 20]]),
+      image2: rowsImage([[20, 20]]),
+      alignment: [],
+    });
 
     expect(image1Data.length).toBe(20);
     expect(image2Data.length).toBe(20);
@@ -368,9 +355,9 @@ describe('the identity alignment', () => {
     expect(computed.alignment).toEqual([]);
 
     const [fresh1, fresh2] = mostlyMatching();
-    expect(
-      imageDiff(fresh1, fresh2, { alignment: computed.alignment }).data,
-    ).toEqual(computed.data);
+    expect(imageDiff(fresh1, fresh2, { alignment: computed.alignment }).data).toEqual(
+      computed.data,
+    );
   });
 });
 
@@ -378,9 +365,7 @@ describe('a stamped alignment', () => {
   it('is stamped by the build that produced it', async () => {
     const [image1, image2] = await shiftedPair();
 
-    expect(imageDiff(image1, image2).alignmentStamp).toEqual(
-      ALIGNMENT_REPLAY_STAMP,
-    );
+    expect(imageDiff(image1, image2).alignmentStamp).toEqual(ALIGNMENT_REPLAY_STAMP);
   });
 
   it('replays when this build reads it the same way', async () => {
@@ -427,8 +412,6 @@ describe('a stamped alignment', () => {
   it('is only checked when there is an alignment to replay', async () => {
     const [image1, image2] = await shiftedPair();
 
-    expect(() =>
-      imageDiff(image1, image2, { alignmentStamp: '1.0.0' }),
-    ).not.toThrow();
+    expect(() => imageDiff(image1, image2, { alignmentStamp: '1.0.0' })).not.toThrow();
   });
 });

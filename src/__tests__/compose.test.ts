@@ -10,11 +10,7 @@ let background: Array<number>;
 beforeEach(() => {
   foreground = [100, 100, 100, 100];
   background = [255, 255, 255, 255];
-  subject = () =>
-    compose(
-      foreground,
-      background,
-    );
+  subject = () => compose(foreground, background);
 });
 
 it('composes the colors', () => {

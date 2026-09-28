@@ -17,7 +17,7 @@ function solidImage(width: number, height: number, value: number) {
 function stripes(width: number, height: number, offset = 0) {
   const data = new Uint8ClampedArray(width * height * 4);
   for (let y = 0; y < height; y++) {
-    data.fill((y + offset) * 7 % 256, y * width * 4, (y + 1) * width * 4);
+    data.fill(((y + offset) * 7) % 256, y * width * 4, (y + 1) * width * 4);
     for (let x = 0; x < width; x++) {
       data[(y * width + x) * 4 + 3] = 255;
     }
@@ -56,7 +56,7 @@ describe('packRows', () => {
     const rows = [flat.subarray(0, 4), new Uint8ClampedArray([9, 9, 9, 9, 9, 9, 9, 9])];
     const packed = packRows(rows, flat.buffer, 8);
     expectContiguous(packed);
-    expect(packed.map(row => Array.from(row))).toEqual([
+    expect(packed.map((row) => Array.from(row))).toEqual([
       [1, 2, 3, 4, 1, 1, 1, 1],
       [9, 9, 9, 9, 9, 9, 9, 9],
     ]);
@@ -71,13 +71,10 @@ describe('packRows', () => {
   });
 
   it('copies scattered rows into one buffer, in order', () => {
-    const rows = [
-      new Uint8ClampedArray([1, 2, 3, 4]),
-      new Uint8ClampedArray([5, 6, 7, 8]),
-    ];
+    const rows = [new Uint8ClampedArray([1, 2, 3, 4]), new Uint8ClampedArray([5, 6, 7, 8])];
     const packed = packRows(rows);
     expectContiguous(packed);
-    expect(packed.map(row => Array.from(row))).toEqual([
+    expect(packed.map((row) => Array.from(row))).toEqual([
       [1, 2, 3, 4],
       [5, 6, 7, 8],
     ]);
@@ -94,10 +91,7 @@ describe('flatPixels', () => {
   });
 
   it('copies rows that are not contiguous', () => {
-    const rows = [
-      new Uint8ClampedArray([1, 2, 3, 4]),
-      new Uint8ClampedArray([5, 6, 7, 8]),
-    ];
+    const rows = [new Uint8ClampedArray([1, 2, 3, 4]), new Uint8ClampedArray([5, 6, 7, 8])];
     expect(Array.from(flatPixels(rows))).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
   });
 });
@@ -146,11 +140,10 @@ describe('computeAndInjectDiffs', () => {
   });
 
   it('returns each image as views of one buffer after injecting rows', () => {
-    const { image1Data, image2Data, image1InjectedRows } =
-      computeAndInjectDiffs({
-        image1: stripes(4, 30),
-        image2: stripes(4, 36, 0),
-      });
+    const { image1Data, image2Data, image1InjectedRows } = computeAndInjectDiffs({
+      image1: stripes(4, 30),
+      image2: stripes(4, 36, 0),
+    });
     expect(image1InjectedRows.size).toBeGreaterThan(0);
     expectContiguous(image1Data);
     expectContiguous(image2Data);
@@ -176,8 +169,11 @@ describe('computeAndInjectDiffs, counting what it allocates', () => {
       constructor(...args: Array<unknown>) {
         // @ts-expect-error -- forwards whichever overload was called
         super(...args);
-        if (!ArrayBuffer.isView(args[0]) && !(args[0] instanceof ArrayBuffer) &&
-          this.byteLength >= minBytes) {
+        if (
+          !ArrayBuffer.isView(args[0]) &&
+          !(args[0] instanceof ArrayBuffer) &&
+          this.byteLength >= minBytes
+        ) {
           sizes.push(this.byteLength);
         }
       }
@@ -223,8 +219,8 @@ describe('createDiffImage with ignoreAntialiasing', () => {
       image2: stripes(6, 36, 3),
     });
     const copies = {
-      image1Data: aligned.image1Data.map(row => row.slice()),
-      image2Data: aligned.image2Data.map(row => row.slice()),
+      image1Data: aligned.image1Data.map((row) => row.slice()),
+      image2Data: aligned.image2Data.map((row) => row.slice()),
     };
 
     const shared = createDiffImage({ ...aligned, ignoreAntialiasing: true });

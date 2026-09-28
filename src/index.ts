@@ -1,8 +1,5 @@
 import type { AlignmentReplayStamp } from './alignmentReplay.ts';
-import {
-  ALIGNMENT_REPLAY_STAMP,
-  canReplayAlignment,
-} from './alignmentReplay.ts';
+import { ALIGNMENT_REPLAY_STAMP, canReplayAlignment } from './alignmentReplay.ts';
 import type { HashFunction, ImageInput } from './computeAndInjectDiffs.ts';
 import type { RowAlignment } from './computeAndInjectDiffs.ts';
 import computeAndInjectDiffs from './computeAndInjectDiffs.ts';
@@ -13,10 +10,7 @@ import type DiffTrace from './DiffTrace.ts';
 
 export { DIFF_TRACE_PADDING };
 export type { RowKey } from './alignArrays.ts';
-export type {
-  AlignmentReplayStamp,
-  ReplayerRevisions,
-} from './alignmentReplay.ts';
+export type { AlignmentReplayStamp, ReplayerRevisions } from './alignmentReplay.ts';
 export {
   ALIGNMENT_REPLAY_STAMP,
   canReplayAlignment,
@@ -101,8 +95,7 @@ function imageDiff(
     ignoreAntialiasing,
   });
 
-  const differentDimensions =
-    image1.width !== image2.width || image1.height !== image2.height;
+  const differentDimensions = image1.width !== image2.width || image1.height !== image2.height;
 
   return {
     data,

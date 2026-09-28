@@ -9,13 +9,10 @@ import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { ImageDiffResult,ImageInput } from 'lcs-image-diff';
+import type { ImageDiffResult, ImageInput } from 'lcs-image-diff';
 import imageDiff, { DIFF_TRACE_PADDING } from 'lcs-image-diff';
 import { ALIGNMENT_REPLAY_STAMP as viaMainEntry } from 'lcs-image-diff';
-import {
-  ALIGNMENT_REPLAY_STAMP,
-  canReplayAlignment,
-} from 'lcs-image-diff/alignmentReplay.js';
+import { ALIGNMENT_REPLAY_STAMP, canReplayAlignment } from 'lcs-image-diff/alignmentReplay.js';
 import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
 import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
 // The two `src/` paths are deep imports another codebase in this org already
@@ -36,10 +33,7 @@ async function load(name: string): Promise<ImageInput> {
   return { data, width: metadata.width, height: metadata.height };
 }
 
-const [image1, image2] = await Promise.all([
-  load('google-logo.png'),
-  load('github-logo.png'),
-]);
+const [image1, image2] = await Promise.all([load('google-logo.png'), load('github-logo.png')]);
 
 const result: ImageDiffResult = imageDiff(image1, image2);
 
@@ -94,7 +88,7 @@ const thresholded = imageDiff(image1, image2, {
   ignoreAntialiasing: true,
 });
 assert.ok(
-  thresholded.trace.data.every(v => v === 0),
+  thresholded.trace.data.every((v) => v === 0),
   'nothing traced above the largest possible delta',
 );
 

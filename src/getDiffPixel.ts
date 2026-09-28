@@ -77,14 +77,6 @@ export default function getDiffPixel(
  * drawn the way an unchanged pixel is, with a faint tint of the change colour
  * over it.
  */
-export function getUncountedDiffPixel(
-  r2: number,
-  g2: number,
-  b2: number,
-  a2: number,
-): ColorLike {
-  return compose(
-    UNCOUNTED_TINT,
-    a2 === 0 ? TRANSPARENT : [r2, g2, b2, 140],
-  );
+export function getUncountedDiffPixel(r2: number, g2: number, b2: number, a2: number): ColorLike {
+  return compose(UNCOUNTED_TINT, a2 === 0 ? TRANSPARENT : [r2, g2, b2, 140]);
 }

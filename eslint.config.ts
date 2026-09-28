@@ -37,10 +37,7 @@ const config: Config = defineConfig(
 
     rules: {
       // https://typescript-eslint.io/rules/array-type
-      '@typescript-eslint/array-type': [
-        'error',
-        { default: 'generic', readonly: 'generic' },
-      ],
+      '@typescript-eslint/array-type': ['error', { default: 'generic', readonly: 'generic' }],
 
       // https://typescript-eslint.io/rules/no-unused-vars
       '@typescript-eslint/no-unused-vars': [

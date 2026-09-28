@@ -23,7 +23,7 @@ function isFullyTransparent(color: ColorLike): boolean {
  * This is a quicker implementation of Math.round((a * b) / 255.0)
  */
 function int8Mult(a: number, b: number): number {
-  const t = (a * b) + 0x80;
+  const t = a * b + 0x80;
   return ((t >> 8) + t) >> 8;
 }
 
@@ -32,10 +32,7 @@ function int8Mult(a: number, b: number): number {
  *
  * This version is faster than a version based on floating point math.
  */
-export default function compose(
-  foreground: ColorLike,
-  background: ColorLike,
-): ColorLike {
+export default function compose(foreground: ColorLike, background: ColorLike): ColorLike {
   if (isOpaque(foreground) || isFullyTransparent(background)) {
     return foreground;
   }

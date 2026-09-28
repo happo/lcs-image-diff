@@ -71,9 +71,7 @@ describe('writeDiffPixel', () => {
     for (const v1 of values) {
       for (const v2 of values) {
         for (const a2 of [0, 1, 140, 255]) {
-          const diff = Math.abs(
-            colorDeltaChannels(v1, v1, v2, 255, v2, v1, v2, a2),
-          );
+          const diff = Math.abs(colorDeltaChannels(v1, v1, v2, 255, v2, v1, v2, a2));
           writeDiffPixel(out, 0, diff, v2, v1, v2, a2);
           expected.set(Array.from(composed(diff, v2, v1, v2, a2)));
           expect(Array.from(out)).toEqual(Array.from(expected));

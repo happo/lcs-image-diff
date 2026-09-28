@@ -21,10 +21,7 @@ function hashFunction(data: Uint8ClampedArray): string {
 
 async function loadImage(filePath: string): Promise<ImageInput> {
   const s = sharp(filePath);
-  const [metadata, buffer] = await Promise.all([
-    s.metadata(),
-    s.ensureAlpha().raw().toBuffer(),
-  ]);
+  const [metadata, buffer] = await Promise.all([s.metadata(), s.ensureAlpha().raw().toBuffer()]);
   return { data: buffer, width: metadata.width, height: metadata.height };
 }
 
@@ -58,7 +55,7 @@ async function main(): Promise<void> {
   const snapshotsDir = path.resolve(__dirname, 'snapshots');
   const snapshots = fs
     .readdirSync(snapshotsDir)
-    .filter(name => fs.statSync(path.join(snapshotsDir, name)).isDirectory());
+    .filter((name) => fs.statSync(path.join(snapshotsDir, name)).isDirectory());
   snapshots.sort((a, b) => a.localeCompare(b));
 
   console.log(`Profiling ${snapshots.length} snapshots, ${RUNS_PER_SNAPSHOT} runs each\n`);
@@ -78,10 +75,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const [image1, image2] = await Promise.all([
-      loadImage(beforePath),
-      loadImage(afterPath),
-    ]);
+    const [image1, image2] = await Promise.all([loadImage(beforePath), loadImage(afterPath)]);
 
     const sizeLabel = `${image1.width}x${image1.height} / ${image2.width}x${image2.height}`;
 
@@ -104,7 +98,9 @@ async function main(): Promise<void> {
   // Summary
   const totalMean = allResults.reduce((a, r) => a + r.mean, 0);
   console.log('-'.repeat(105));
-  console.log(`${'TOTAL (sum of means)'.padEnd(40)} ${''.padStart(4)}  ${''.padStart(9)}  ${''.padStart(9)}  ${formatMs(totalMean).padStart(9)}`);
+  console.log(
+    `${'TOTAL (sum of means)'.padEnd(40)} ${''.padStart(4)}  ${''.padStart(9)}  ${''.padStart(9)}  ${formatMs(totalMean).padStart(9)}`,
+  );
 
   const slowest = allResults.reduce((a, r) => (r.median > a.median ? r : a));
   const fastest = allResults.reduce((a, r) => (r.median < a.median ? r : a));

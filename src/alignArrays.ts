@@ -81,8 +81,7 @@ export default function alignArrays(a: Array<RowKey>, b: Array<RowKey>): void {
   // checkpoint 0 is already correct.
   const checkpoints = new Int32Array(checkpointCount * bandWidth);
 
-  const colOffFor = (i: number): number =>
-    i - halfDrift > 1 ? i - halfDrift - 1 : 0;
+  const colOffFor = (i: number): number => (i - halfDrift > 1 ? i - halfDrift - 1 : 0);
 
   /**
    * Fills `cur` with memo row `i`, reading memo row `i - 1` from `prev`, and
@@ -170,18 +169,10 @@ export default function alignArrays(a: Array<RowKey>, b: Array<RowKey>): void {
 
     let from = prevRow;
     let into = curRow;
-    from.set(
-      checkpoints.subarray(stripe * bandWidth, (stripe + 1) * bandWidth),
-    );
+    from.set(checkpoints.subarray(stripe * bandWidth, (stripe + 1) * bandWidth));
 
     for (let i = checkpointRow + 1; i <= lastRow; i++) {
-      computeRow(
-        i,
-        from,
-        into,
-        stripeSolution,
-        (i - checkpointRow - 1) * bandWidth,
-      );
+      computeRow(i, from, into, stripeSolution, (i - checkpointRow - 1) * bandWidth);
 
       const swap = from;
       from = into;
@@ -210,9 +201,7 @@ export default function alignArrays(a: Array<RowKey>, b: Array<RowKey>): void {
       materializeStripe(stripe);
     }
 
-    return stripeSolution[
-      (i - 1 - stripe * stripeHeight) * bandWidth + bandIdx
-    ];
+    return stripeSolution[(i - 1 - stripe * stripeHeight) * bandWidth + bandIdx];
   }
 
   let ai = aLength;
@@ -248,7 +237,7 @@ export default function alignArrays(a: Array<RowKey>, b: Array<RowKey>): void {
     const shorterArray = aLen > bLen ? b : a;
     const diff = Math.abs(aLen - bLen);
     if (a[0] === b[0]) {
-      shorterArray.splice(- 1, 0, ...placeholders(diff));
+      shorterArray.splice(-1, 0, ...placeholders(diff));
     } else {
       shorterArray.splice(0, 0, ...placeholders(diff));
     }

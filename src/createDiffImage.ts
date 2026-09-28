@@ -63,9 +63,7 @@ export default function createDiffImage({
   // and below, so it needs the images whole rather than as rows. The rows
   // `computeAndInjectDiffs` returns already share one buffer per image, so
   // this views them where they are; rows from anywhere else are copied.
-  const flat = ignoreAntialiasing
-    ? [flatPixels(image1Data), flatPixels(image2Data)]
-    : undefined;
+  const flat = ignoreAntialiasing ? [flatPixels(image1Data), flatPixels(image2Data)] : undefined;
   const words = flat?.map(asPixelWords);
   const size = { width: width / 4, height };
 

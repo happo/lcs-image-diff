@@ -49,26 +49,13 @@ pnpm run profile                                   # Time imageDiff over the sna
 
 ESM (`"type": "module"` in package.json), TypeScript 6 with `module: nodenext`.
 
-Relative imports name the real file: `./foo.ts`, not `./foo.js`. That is what
-lets Node run the sources directly -- its type stripping will not resolve a
-`.js` specifier to a `.ts` file. `rewriteRelativeImportExtensions` turns them
-into `./foo.js` on emit, so `dist/` is ordinary JavaScript. `erasableSyntaxOnly`
-keeps the source to syntax Node can strip, which rules out enums, namespaces
-and parameter properties.
+Relative imports name the real file: `./foo.ts`, not `./foo.js`. That is what lets Node run the sources directly -- its type stripping will not resolve a `.js` specifier to a `.ts` file. `rewriteRelativeImportExtensions` turns them into `./foo.js` on emit, so `dist/` is ordinary JavaScript. `erasableSyntaxOnly` keeps the source to syntax Node can strip, which rules out enums, namespaces and parameter properties.
 
-Because of that there is no toolchain for running a script: `node server.ts`
-and `node profile.ts` work as they are.
+Because of that there is no toolchain for running a script: `node server.ts` and `node profile.ts` work as they are.
 
-`tsconfig.json` type checks everything and emits nothing;
-`tsconfig.build.json` is the one that writes `dist/`; `tsconfig.smoke.json`
-checks `scripts/smoke.ts` against the built package and so only works after a
-build, which is why it is kept out of `pnpm tsc`.
+`tsconfig.json` type checks everything and emits nothing; `tsconfig.build.json` is the one that writes `dist/`; `tsconfig.smoke.json` checks `scripts/smoke.ts` against the built package and so only works after a build, which is why it is kept out of `pnpm tsc`.
 
-Tests run under Vitest (`vitest.config.ts`), which compiles the `.ts` itself
-rather than going through Node's type stripping. Its compiler accepts syntax
-Node refuses and resolves a `./foo.js` import to `foo.ts`, and it does not type
-check -- so a green test run says nothing about whether Node can load the
-sources. `pnpm tsc` does.
+Tests run under Vitest (`vitest.config.ts`), which compiles the `.ts` itself rather than going through Node's type stripping. Its compiler accepts syntax Node refuses and resolves a `./foo.js` import to `foo.ts`, and it does not type check -- so a green test run says nothing about whether Node can load the sources. `pnpm tsc` does.
 
 ## Key Algorithms
 
@@ -80,11 +67,11 @@ sources. `pnpm tsc` does.
 
 **Color delta** (`colorDelta.ts`): YIQ NTSC color space (from pixelmatch). Weighted: `0.5053×y² + 0.299×i² + 0.1957×q²`, normalized by `MAX_YIQ_DIFFERENCE`. Sign encodes lighter vs darker.
 
-**Which pixels count** (`createDiffImage.ts`, `antialiasing.ts`): by default any differing pixel is a change. `threshold` and `ignoreAntialiasing` narrow that to happo-compare's rule -- colour delta above the threshold, and not anti-aliasing in either image -- so a viewer given a comparison's settings highlights the pixels that comparison measured. happo-compare imports `isAntialiased` from here rather than keeping its own copy, which is what keeps the two from drifting. The check reads each image flat (it looks at the rows above and below), so each aligned image comes back as consecutive views of one buffer of its own (`flatRows.ts`), which `createDiffImage` reads in place rather than copying. To get there without an extra copy, `imageTo2DArray` hands out rows that *view the caller's pixels* when no padding is needed; aligning only reads them, and `computeAndInjectDiffs` writes each aligned image into its own buffer once, at the end (`materialize`), so the result never shares memory with the input. That holds for the narrower of two images of different widths too: it is aligned as if padded to the wider one with filler pixels `(1, 1, 1, 1)`, but the interner fingerprints, compares and keys each row as its padded form would be (`createPaddedIntern`), `similarEnough` treats the missing bytes as filler, and a stored alignment hashes nothing -- so the padding is first written by `materialize`, into that one buffer. The exception is a caller's own `hashFunction`, which is handed the padded row itself, so with one the narrower image is still copied with its padding up front. A differing pixel that does not count is left out of the trace and drawn faintly tinted instead of in the change colour. `diff` and `maxDiff` still include every differing pixel: they describe how far apart the images are, not what was highlighted.
+**Which pixels count** (`createDiffImage.ts`, `antialiasing.ts`): by default any differing pixel is a change. `threshold` and `ignoreAntialiasing` narrow that to happo-compare's rule -- colour delta above the threshold, and not anti-aliasing in either image -- so a viewer given a comparison's settings highlights the pixels that comparison measured. happo-compare imports `isAntialiased` from here rather than keeping its own copy, which is what keeps the two from drifting. The check reads each image flat (it looks at the rows above and below), so each aligned image comes back as consecutive views of one buffer of its own (`flatRows.ts`), which `createDiffImage` reads in place rather than copying. To get there without an extra copy, `imageTo2DArray` hands out rows that _view the caller's pixels_ when no padding is needed; aligning only reads them, and `computeAndInjectDiffs` writes each aligned image into its own buffer once, at the end (`materialize`), so the result never shares memory with the input. That holds for the narrower of two images of different widths too: it is aligned as if padded to the wider one with filler pixels `(1, 1, 1, 1)`, but the interner fingerprints, compares and keys each row as its padded form would be (`createPaddedIntern`), `similarEnough` treats the missing bytes as filler, and a stored alignment hashes nothing -- so the padding is first written by `materialize`, into that one buffer. The exception is a caller's own `hashFunction`, which is handed the padded row itself, so with one the narrower image is still copied with its padding up front. A differing pixel that does not count is left out of the trace and drawn faintly tinted instead of in the change colour. `diff` and `maxDiff` still include every differing pixel: they describe how far apart the images are, not what was highlighted.
 
 **No allocation per pixel** (`createDiffImage.ts`, `getDiffPixel.ts`): the diff loop writes each pixel into the output with `writeDiffPixel` rather than building arrays through `compose`. A tall page is tens of millions of pixels, and a couple of small arrays each kept V8's garbage collector busy enough to dominate the diff -- and made its speed depend on how large the rest of the heap happened to be. Only pixels drawn with the faint "uncounted" tint still go through `compose`.
 
-**Replaying a stored alignment** (`alignmentReplay.ts`): a replay reads the runs, applies `simplifySegments` and rebuilds the images; the search (row keying, `similarEnough`, `alignArrays`) never runs. So only a change to how runs are *read* changes what a stored alignment replays to, and only that bumps `REPLAY_REVISION`. Consumers store `ALIGNMENT_REPLAY_STAMP` (`{ revision, replayableFrom }`) with each alignment and ask `canReplayAlignment` before replaying, which keeps version lists out of every consumer. When you bump `REPLAY_REVISION`: raise `OLDEST_REPLAYABLE_REVISION` with it unless the old way of reading runs is kept alongside the new, and raise `REPLAYABLE_FROM_REVISION` unless older builds read the new runs correctly (for example, it teaches this build to read something it never writes). `STAMP_FOR_UNSTAMPED_VERSION` covers releases from before stamps existed and is closed; never add to it.
+**Replaying a stored alignment** (`alignmentReplay.ts`): a replay reads the runs, applies `simplifySegments` and rebuilds the images; the search (row keying, `similarEnough`, `alignArrays`) never runs. So only a change to how runs are _read_ changes what a stored alignment replays to, and only that bumps `REPLAY_REVISION`. Consumers store `ALIGNMENT_REPLAY_STAMP` (`{ revision, replayableFrom }`) with each alignment and ask `canReplayAlignment` before replaying, which keeps version lists out of every consumer. When you bump `REPLAY_REVISION`: raise `OLDEST_REPLAYABLE_REVISION` with it unless the old way of reading runs is kept alongside the new, and raise `REPLAYABLE_FROM_REVISION` unless older builds read the new runs correctly (for example, it teaches this build to read something it never writes). `STAMP_FOR_UNSTAMPED_VERSION` covers releases from before stamps existed and is closed; never add to it.
 
 **Diff colors**: Magenta `#C52772` = changed pixels, Green `#6A8500` = added rows.
 
@@ -124,14 +111,9 @@ const likeTheComparison = imageDiff(image1, image2, {
 
 Return value: `{ data: Uint8ClampedArray, width, height, diff: number (0–1), trace: DiffTrace }`.
 
-`DIFF_TRACE_PADDING` is a named export. It is also still reachable as
-`imageDiff.DIFF_TRACE_PADDING`, which is deprecated and goes away in the next
-major -- the deprecation is written on an ambient `declare namespace imageDiff`
-in `index.ts` so that it reaches the emitted declaration.
+`DIFF_TRACE_PADDING` is a named export. It is also still reachable as `imageDiff.DIFF_TRACE_PADDING`, which is deprecated and goes away in the next major -- the deprecation is written on an ambient `declare namespace imageDiff` in `index.ts` so that it reaches the emitted declaration.
 
-Four modules are exported individually. They are listed one by one in
-`exports` rather than matched by a wildcard, so the public surface is only
-what callers actually import -- adding another means adding an entry.
+Four modules are exported individually. They are listed one by one in `exports` rather than matched by a wildcard, so the public surface is only what callers actually import -- adding another means adding an entry.
 
 ```js
 import computeAndInjectDiffs from 'lcs-image-diff/computeAndInjectDiffs.js';
@@ -140,10 +122,7 @@ import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
 import { canReplayAlignment } from 'lcs-image-diff/alignmentReplay.js';
 ```
 
-The first two are also reachable under a `src/` prefix, which predates this package
-having an `exports` field. Callers elsewhere still use that spelling; it goes
-away in a breaking change. `scripts/smoke.ts` covers every one of these paths
-so none of them can break silently.
+The first two are also reachable under a `src/` prefix, which predates this package having an `exports` field. Callers elsewhere still use that spelling; it goes away in a breaking change. `scripts/smoke.ts` covers every one of these paths so none of them can break silently.
 
 ## Dependencies
 
@@ -151,9 +130,6 @@ so none of them can break silently.
 - `typescript` (dev) — v6
 - `sharp` (dev) — PNG loading in tests
 - `vitest` (dev) — test runner, with `vite` as its peer dependency
-- `eslint` (dev) — linter; `eslint.config.ts` is loaded through `jiti`, which
-  ESLint needs for a TypeScript config
+- `eslint` (dev) — linter; `eslint.config.ts` is loaded through `jiti`, which ESLint needs for a TypeScript config
 
-Dependency versions are subject to the `minimumReleaseAge` cooldown in
-`pnpm-workspace.yaml`, so a range whose only match is a package published in the
-last two days will fail to install.
+Dependency versions are subject to the `minimumReleaseAge` cooldown in `pnpm-workspace.yaml`, so a range whose only match is a package published in the last two days will fail to install.

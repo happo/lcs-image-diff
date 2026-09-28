@@ -17,12 +17,8 @@ let subject: () => ImageDiffResult;
 
 beforeEach(async () => {
   hashFunction = undefined;
-  const image1Sharp = sharp(
-    path.resolve(__dirname, '../../static/google-logo.png'),
-  );
-  const image2Sharp = sharp(
-    path.resolve(__dirname, '../../static/github-logo.png'),
-  );
+  const image1Sharp = sharp(path.resolve(__dirname, '../../static/google-logo.png'));
+  const image2Sharp = sharp(path.resolve(__dirname, '../../static/github-logo.png'));
 
   const [image1Metadata, image2Metadata] = await Promise.all([
     image1Sharp.metadata(),
@@ -70,12 +66,8 @@ it('has meta-data', () => {
 });
 
 it('has maxDiff=1 when images are of different size', async () => {
-  const image1Sharp = sharp(
-    path.resolve(__dirname, 'test-images/button-before.png'),
-  );
-  const image2Sharp = sharp(
-    path.resolve(__dirname, 'test-images/button-after.png'),
-  );
+  const image1Sharp = sharp(path.resolve(__dirname, 'test-images/button-before.png'));
+  const image2Sharp = sharp(path.resolve(__dirname, 'test-images/button-after.png'));
 
   const [image1Metadata, image2Metadata] = await Promise.all([
     image1Sharp.metadata(),
@@ -108,6 +100,6 @@ it('passes threshold and ignoreAntialiasing through to the diff image', () => {
     threshold: 1,
     ignoreAntialiasing: true,
   });
-  expect(counted.trace.data.some(v => v > 0)).toBe(true);
-  expect(thresholded.trace.data.some(v => v > 0)).toBe(false);
+  expect(counted.trace.data.some((v) => v > 0)).toBe(true);
+  expect(thresholded.trace.data.some((v) => v > 0)).toBe(false);
 });

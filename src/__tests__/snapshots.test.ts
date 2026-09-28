@@ -65,9 +65,7 @@ describe('snapshot tests', { timeout: 60_000 }, () => {
       //
       // find snapshots -name diff.png | xargs rm
       if (!fs.existsSync(pathToDiff)) {
-        console.log(
-          `No previous diff image for ${snapshot} found -- saving diff.png.`,
-        );
+        console.log(`No previous diff image for ${snapshot} found -- saving diff.png.`);
         await sharp(diffImage.data, {
           raw: {
             width: diffImage.width,
