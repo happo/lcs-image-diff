@@ -78,7 +78,7 @@
     "@types/node": "^24.13.5",
     "release-with-ease": "^2.8.0",
     "sharp": "^0.35.4",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
     "vite": "^8.3.1",
     "vitest": "^5.0.2"
   }

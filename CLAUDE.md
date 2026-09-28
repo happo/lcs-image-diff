@@ -45,7 +45,7 @@ pnpm run profile                                   # Time imageDiff over the sna
 
 ## Module System
 
-ESM (`"type": "module"` in package.json), TypeScript 7 with `module: nodenext`.
+ESM (`"type": "module"` in package.json), TypeScript 6 with `module: nodenext`.
 
 Relative imports name the real file: `./foo.ts`, not `./foo.js`. That is what
 lets Node run the sources directly -- its type stripping will not resolve a
@@ -124,8 +124,8 @@ Return value: `{ data: Uint8ClampedArray, width, height, diff: number (0–1), t
 
 `DIFF_TRACE_PADDING` is a named export. It is also still reachable as
 `imageDiff.DIFF_TRACE_PADDING`, which is deprecated and goes away in the next
-major -- the deprecation is written on its own const in `index.ts` so that it
-reaches the emitted declaration.
+major -- the deprecation is written on an ambient `declare namespace imageDiff`
+in `index.ts` so that it reaches the emitted declaration.
 
 Four modules are exported individually. They are listed one by one in
 `exports` rather than matched by a wildcard, so the public surface is only
@@ -146,7 +146,7 @@ so none of them can break silently.
 ## Dependencies
 
 - `imagetracerjs` — raster-to-SVG for `DiffTrace` (untyped; see `src/imagetracerjs.d.ts`)
-- `typescript` (dev) — v7, the native compiler
+- `typescript` (dev) — v6
 - `sharp` (dev) — PNG loading in tests
 - `vitest` (dev) — test runner, with `vite` as its peer dependency
 

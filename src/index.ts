@@ -67,7 +67,7 @@ export interface ImageDiffResult {
   alignmentStamp: Readonly<AlignmentReplayStamp>;
 }
 
-export default function imageDiff(
+function imageDiff(
   image1: ImageInput,
   image2: ImageInput,
   {
@@ -118,13 +118,18 @@ export default function imageDiff(
   };
 }
 
-/**
- * @deprecated Import `DIFF_TRACE_PADDING` instead:
- * `import { DIFF_TRACE_PADDING } from 'lcs-image-diff'`. Hanging it off the
- * function is kept for back-compat and goes away in the next major.
- */
-const DEPRECATED_DIFF_TRACE_PADDING = DIFF_TRACE_PADDING;
+// Declared rather than left to be inferred from the assignment below, so the
+// deprecation reaches the emitted declaration: TypeScript 6 drops a comment
+// written on the assignment itself. It is ambient, so it emits no code.
+declare namespace imageDiff {
+  /**
+   * @deprecated Import `DIFF_TRACE_PADDING` instead:
+   * `import { DIFF_TRACE_PADDING } from 'lcs-image-diff'`. Hanging it off the
+   * function is kept for back-compat and goes away in the next major.
+   */
+  let DIFF_TRACE_PADDING: number;
+}
 
-// Documented on its own const above so the deprecation reaches the emitted
-// declaration -- a comment on the assignment alone does not survive the emit.
-imageDiff.DIFF_TRACE_PADDING = DEPRECATED_DIFF_TRACE_PADDING;
+imageDiff.DIFF_TRACE_PADDING = DIFF_TRACE_PADDING;
+
+export default imageDiff;
