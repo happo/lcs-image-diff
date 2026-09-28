@@ -1,5 +1,4 @@
 import path from 'node:path';
-import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
@@ -12,7 +11,7 @@ import imageDiff, {
   REPLAY_REVISION,
 } from '../index.ts';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function loadImage(name: string): Promise<ImageInput> {
   const image = sharp(path.resolve(__dirname, '../../static', name));

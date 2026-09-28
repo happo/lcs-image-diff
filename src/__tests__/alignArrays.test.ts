@@ -79,7 +79,7 @@ it('aligns content shifted far enough to cross many stripes', () => {
   alignArrays(a, b);
 
   expect(a).toHaveLength(b.length);
-  expect(a.slice(0, 400)).toEqual(Array.from({length: 400}).fill('+'));
+  expect(a.slice(0, 400)).toEqual(Array.from({ length: 400 }, () => '+'));
   expect(a.slice(400)).toEqual(common);
   expect(b).toEqual([...inserted, ...common]);
 });

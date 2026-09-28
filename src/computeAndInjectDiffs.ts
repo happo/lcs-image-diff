@@ -106,6 +106,9 @@ export function hashRowWithBuffer(row: Bytes): string {
 export function hashRowWithCharCodes(row: Bytes): string {
   let result = '';
   for (let i = 0; i < row.length; i += CHARS_PER_CALL) {
+    // These are bytes, not text, so there are no code points above 0xFFFF for
+    // fromCodePoint to handle -- and it is about 40% slower here.
+    // eslint-disable-next-line unicorn/prefer-code-point
     result += String.fromCharCode(...row.subarray(i, i + CHARS_PER_CALL));
   }
   return result;
@@ -150,12 +153,16 @@ function fingerprint(row: Uint8ClampedArray, padBytes: number): number {
   const length = row.length + padBytes;
   let result = length;
   let i = 0;
+  // `| 0` wraps the hash to 32 bits. `Math.trunc` would not, so it is not
+  // what unicorn/prefer-math-trunc takes it for.
+  /* eslint-disable unicorn/prefer-math-trunc */
   for (; i < row.length; i += FINGERPRINT_STRIDE) {
     result = (Math.imul(result, 31) + row[i]) | 0;
   }
   for (; i < length; i += FINGERPRINT_STRIDE) {
     result = (Math.imul(result, 31) + FILLER) | 0;
   }
+  /* eslint-enable unicorn/prefer-math-trunc */
   return result;
 }
 
@@ -636,11 +643,12 @@ function simplifySegments(segments: Array<Segment>, threshold: number): void {
 
     // Combine or cancel gap blocks separated by a small match segment
     for (let s = 0; s < segments.length - 2; s++) {
-      const s1 = segments[s];
       const sm = segments[s + 1];
-      const s3 = segments[s + 2];
 
       if (sm.type !== 'match' || sm.rows.length > threshold) {continue;}
+
+      const s1 = segments[s];
+      const s3 = segments[s + 2];
 
       // Combine: two same-direction gaps -> merge them, keep match rows after
       if (s1.type === 'before' && s3.type === 'before') {
@@ -730,7 +738,7 @@ function reconstructImages(
     break;
     }
     case 'neutral': {
-      for (let n = 0; n < seg.rows.length; n++) {
+      for (const _row of seg.rows) {
         const y = out1.length;
         injected1.add(y);
         injected2.add(y);
@@ -1060,7 +1068,6 @@ export default function computeAndInjectDiffs({
   const padUpFront = intern === undefined && storedAlignment === undefined;
 
   const source = (image: ImageInput): RowSource => {
-    const padBytes = (maxWidth - image.width) * 4;
     if (padUpFront) {
       return {
         rows: imageTo2DArray(image, maxWidth - image.width),
@@ -1068,6 +1075,7 @@ export default function computeAndInjectDiffs({
         key: hashFunction,
       };
     }
+    const padBytes = (maxWidth - image.width) * 4;
     return {
       rows: imageTo2DArray(image, 0),
       padBytes,

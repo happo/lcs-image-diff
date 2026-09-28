@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
-import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
@@ -21,7 +20,7 @@ import computeAndInjectDiffs, {
 } from '../computeAndInjectDiffs.ts';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 function createHash(data: Uint8ClampedArray): string {
   return crypto.createHash('md5').update(data).digest('hex');
@@ -138,10 +137,10 @@ describe('injected rows', () => {
       expect(Math.max(image1InjectedRows.size, image2InjectedRows.size)).toBe(6);
 
       for (const y of image1InjectedRows) {
-        expect([...image1Data[y].slice(0, 4)]).toEqual(injectedColor);
+        expect([...image1Data[y].subarray(0, 4)]).toEqual(injectedColor);
       }
       for (const y of image2InjectedRows) {
-        expect([...image2Data[y].slice(0, 4)]).toEqual(injectedColor);
+        expect([...image2Data[y].subarray(0, 4)]).toEqual(injectedColor);
       }
     },
   );
@@ -168,7 +167,7 @@ describe('injected rows', () => {
 
     const contentRows = image1Data
       .map((row, y) => ({ row, y }))
-      .filter(({ row }) => [...row.slice(0, 4)].every((v, i) => v === injectedColor[i]))
+      .filter(({ row }) => row.subarray(0, 4).every((v, i) => v === injectedColor[i]))
       .filter(({ y }) => !image1InjectedRows.has(y));
 
     // The painted row survives as content rather than being called injected.
@@ -601,7 +600,7 @@ describe('images of different widths', () => {
       image2: image(5, 12, () => white),
       hashFunction: row => {
         lengths.add(row.length);
-        tails.add([...row.slice(3 * 4)].join(','));
+        tails.add(row.subarray(3 * 4).join(','));
         return hashRowWithBuffer(row);
       },
     });

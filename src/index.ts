@@ -119,6 +119,7 @@ function imageDiff(
 // Declared rather than left to be inferred from the assignment below, so the
 // deprecation reaches the emitted declaration: TypeScript 6 drops a comment
 // written on the assignment itself. It is ambient, so it emits no code.
+// eslint-disable-next-line @typescript-eslint/no-namespace -- see above
 declare namespace imageDiff {
   /**
    * @deprecated Import `DIFF_TRACE_PADDING` instead:

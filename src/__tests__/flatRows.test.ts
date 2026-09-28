@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { asPixelWords } from '../antialiasing.ts';
 import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
@@ -113,7 +113,9 @@ describe('computeAndInjectDiffs', () => {
     });
     expect(image1Data[0].buffer).not.toBe(image1.data.buffer);
     expect(image2Data[0].buffer).not.toBe(image2.data.buffer);
-    image1Data.forEach(row => row.fill(9));
+    for (const row of image1Data) {
+      row.fill(9);
+    }
     expect(Array.from(image1.data)).toEqual(original);
   });
 
@@ -180,11 +182,11 @@ describe('computeAndInjectDiffs, counting what it allocates', () => {
         }
       }
     }
-    globalThis.Uint8ClampedArray = Counting as typeof Uint8ClampedArray;
+    vi.stubGlobal('Uint8ClampedArray', Counting);
     try {
       run();
     } finally {
-      globalThis.Uint8ClampedArray = Original;
+      vi.unstubAllGlobals();
     }
     return sizes;
   }

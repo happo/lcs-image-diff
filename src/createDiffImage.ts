@@ -116,12 +116,9 @@ export default function createDiffImage({
       const dataIndex = getDataIndex(row, width, index);
 
       if (counted) {
-        let diffColor = MAGENTA;
-        if (addedRow) {
-          // Pixel is transparent in previous image, which means that a row was
-          // added here.
-          diffColor = GREEN;
-        }
+        // A pixel transparent in the previous image means that a row was
+        // added here.
+        const diffColor = addedRow ? GREEN : MAGENTA;
 
         trace.diff({ row, index, color: diffColor });
       }

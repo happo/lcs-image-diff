@@ -7,7 +7,6 @@
 // resolve it through `exports` exactly as an installed copy would.
 import assert from 'node:assert';
 import path from 'node:path';
-import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { ImageDiffResult,ImageInput } from 'lcs-image-diff';
@@ -19,14 +18,14 @@ import {
 } from 'lcs-image-diff/alignmentReplay.js';
 import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
 import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
+// The two `src/` paths are deep imports another codebase in this org already
+// relies on. They were reachable before this package had an `exports` field,
+// so the subpath entries have to keep them working.
 import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
-// Deep imports another codebase in this org already relies on. They were
-// reachable before this package had an `exports` field, so the subpath
-// entries have to keep them working.
 import computeAndInjectDiffs from 'lcs-image-diff/src/computeAndInjectDiffs.js';
 import sharp from 'sharp';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function load(name: string): Promise<ImageInput> {
   const image = sharp(path.resolve(__dirname, '..', 'static', name));
@@ -95,7 +94,7 @@ const thresholded = imageDiff(image1, image2, {
   ignoreAntialiasing: true,
 });
 assert.ok(
-  thresholded.trace.data.every(v => !(v > 0)),
+  thresholded.trace.data.every(v => v === 0),
   'nothing traced above the largest possible delta',
 );
 

@@ -3,29 +3,27 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 // `PORT=0` asks for an ephemeral port, so only fall back when the variable
 // is absent -- `Number(...) || 3456` would turn that 0 back into 3456.
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3456;
-const SNAPSHOTS_DIR = join(__dirname, 'snapshots');
+const SNAPSHOTS_DIR = path.join(__dirname, 'snapshots');
 
 function getSnapshots(): Array<string> {
-  return fs
-    .readdirSync(SNAPSHOTS_DIR)
-    .filter((name: string) => {
-      const dir = path.join(SNAPSHOTS_DIR, name);
-      return (
-        fs.statSync(dir).isDirectory() &&
-        fs.existsSync(path.join(dir, 'before.png')) &&
-        fs.existsSync(path.join(dir, 'after.png'))
-      );
-    })
-    .sort();
+  const snapshots = fs.readdirSync(SNAPSHOTS_DIR).filter((name: string) => {
+    const dir = path.join(SNAPSHOTS_DIR, name);
+    return (
+      fs.statSync(dir).isDirectory() &&
+      fs.existsSync(path.join(dir, 'before.png')) &&
+      fs.existsSync(path.join(dir, 'after.png'))
+    );
+  });
+  snapshots.sort((a, b) => a.localeCompare(b));
+  return snapshots;
 }
 
 const HTML = `<!DOCTYPE html>

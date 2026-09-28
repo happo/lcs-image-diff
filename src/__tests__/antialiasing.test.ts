@@ -11,7 +11,7 @@ const WHITE: Pixel = [255, 255, 255, 255];
 function image(rows: Array<Array<Pixel>>) {
   const height = rows.length;
   const width = rows[0].length;
-  const data = new Uint8ClampedArray(rows.flat(2));
+  const data = new Uint8ClampedArray(rows.flat().flat());
   return { data, words: asPixelWords(data), size: { width, height } };
 }
 

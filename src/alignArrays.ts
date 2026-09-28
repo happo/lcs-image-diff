@@ -18,7 +18,7 @@ const LEFT = 3;
  * ['+', '+', '+'].
  */
 function placeholders(count: number): Array<string> {
-  return Array.from({length: count}).fill(PLACEHOLDER);
+  return Array.from({ length: count }, () => PLACEHOLDER);
 }
 
 /**
