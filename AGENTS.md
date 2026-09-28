@@ -37,6 +37,7 @@ pnpm test                                          # Run all tests
 pnpm test <test_file_name>                         # Run a single test file
 pnpm test -t <matching_string> <test_file_name>    # Run a single describe/test block
 pnpm tsc                                           # Type check everything (no emit)
+pnpm lint                                          # ESLint (eslint.config.ts)
 pnpm run build                                     # Emit dist/ from src/
 pnpm run smoke                                     # Check the built package
 pnpm run serve                                     # Dev server at http://localhost:3456
@@ -149,6 +150,8 @@ so none of them can break silently.
 - `typescript` (dev) — v6
 - `sharp` (dev) — PNG loading in tests
 - `vitest` (dev) — test runner, with `vite` as its peer dependency
+- `eslint` (dev) — linter; `eslint.config.ts` is loaded through `jiti`, which
+  ESLint needs for a TypeScript config
 
 Dependency versions are subject to the `minimumReleaseAge` cooldown in
 `pnpm-workspace.yaml`, so a range whose only match is a package published in the

@@ -31,5 +31,11 @@
     "skipLibCheck": true
   },
 
-  "include": ["src/**/*.ts", "server.ts", "profile.ts", "vitest.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "server.ts",
+    "profile.ts",
+    "vitest.config.ts",
+    "eslint.config.ts"
+  ]
 }
