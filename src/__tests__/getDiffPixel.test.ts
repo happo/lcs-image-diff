@@ -2,13 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { colorDeltaChannels } from '../colorDelta.ts';
 import compose from '../compose.ts';
-
-import getDiffPixel, { writeDiffPixel } from '../getDiffPixel.ts';
 import type { DiffPixel } from '../getDiffPixel.ts';
+import getDiffPixel, { writeDiffPixel } from '../getDiffPixel.ts';
 
 let subject: () => DiffPixel;
-let previousPixel: number[];
-let currentPixel: number[];
+let previousPixel: Array<number>;
+let currentPixel: Array<number>;
 
 beforeEach(() => {
   previousPixel = [255, 255, 255, 255];
@@ -57,7 +56,13 @@ it('returns diff when before is filler pixel', () => {
 describe('writeDiffPixel', () => {
   // What getDiffPixel returned before it wrote into a buffer instead, built
   // from compose() the way it used to be.
-  function composed(diff: number, r2: number, g2: number, b2: number, a2: number) {
+  function composed(
+    diff: number,
+    r2: number,
+    g2: number,
+    b2: number,
+    a2: number,
+  ) {
     const transparent = [0, 0, 0, 0] as const;
     if (diff === 0) {
       return a2 === 0 ? transparent : compose([r2, g2, b2, 140], transparent);

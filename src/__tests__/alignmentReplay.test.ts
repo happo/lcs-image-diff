@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { AlignmentReplayStamp } from '../alignmentReplay.ts';
 import {
   ALIGNMENT_REPLAY_STAMP,
   canReplayAlignment,
@@ -7,7 +8,6 @@ import {
   REPLAY_REVISION,
   REPLAYABLE_FROM_REVISION,
 } from '../alignmentReplay.ts';
-import type { AlignmentReplayStamp } from '../alignmentReplay.ts';
 
 describe('this build', () => {
   it('replays its own alignments', () => {
@@ -30,14 +30,14 @@ describe('this build', () => {
 describe('alignments stored before there were stamps', () => {
   it.each(['4.3.0', '4.4.0', '4.4.1', '4.4.2'])(
     'replays one produced by %s',
-    version => {
+    (version) => {
       expect(canReplayAlignment(version)).toBe(true);
     },
   );
 
   it.each(['4.2.0', '3.0.0', '4.5.0', '', 'toString'])(
     'does not replay one produced by %o',
-    version => {
+    (version) => {
       expect(canReplayAlignment(version)).toBe(false);
     },
   );
@@ -53,7 +53,7 @@ describe('stamps that came from storage', () => {
     { revision: 1.5, replayableFrom: 1 },
     { revision: 0, replayableFrom: 0 },
     { revision: 1, replayableFrom: 2 },
-  ])('refuses %o', stamp => {
+  ])('refuses %o', (stamp) => {
     expect(
       canReplayAlignment(stamp as AlignmentReplayStamp | null | undefined),
     ).toBe(false);

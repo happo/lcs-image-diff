@@ -5,30 +5,27 @@
 // `types` and `exports` actually point at something that loads and runs. This
 // imports by package name rather than by path, so Node and TypeScript both
 // resolve it through `exports` exactly as an installed copy would.
-import assert from 'assert';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import assert from 'node:assert';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import sharp from 'sharp';
-
+import type { ImageDiffResult, ImageInput } from 'lcs-image-diff';
 import imageDiff, { DIFF_TRACE_PADDING } from 'lcs-image-diff';
-import type { ImageInput, ImageDiffResult } from 'lcs-image-diff';
-
-// Deep imports another codebase in this org already relies on. They were
-// reachable before this package had an `exports` field, so the subpath
-// entries have to keep them working.
-import computeAndInjectDiffs from 'lcs-image-diff/src/computeAndInjectDiffs.js';
-import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
-import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
-import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
+import { ALIGNMENT_REPLAY_STAMP as viaMainEntry } from 'lcs-image-diff';
 import {
   ALIGNMENT_REPLAY_STAMP,
   canReplayAlignment,
 } from 'lcs-image-diff/alignmentReplay.js';
-import { ALIGNMENT_REPLAY_STAMP as viaMainEntry } from 'lcs-image-diff';
+import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
+import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
+// The two `src/` paths are deep imports another codebase in this org already
+// relies on. They were reachable before this package had an `exports` field,
+// so the subpath entries have to keep them working.
+import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
+import computeAndInjectDiffs from 'lcs-image-diff/src/computeAndInjectDiffs.js';
+import sharp from 'sharp';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function load(name: string): Promise<ImageInput> {
   const image = sharp(path.resolve(__dirname, '..', 'static', name));
@@ -54,12 +51,19 @@ assert.ok(result.diff > 0 && result.diff < 1, `diff in range: ${result.diff}`);
 assert.strictEqual(result.maxDiff, 1, 'maxDiff for differently sized images');
 
 // The trace is the other half of the public surface.
-assert.match(result.trace.toSVG(), /^<svg[^>]*viewBox="0 0 100 100"/, 'trace svg');
+assert.match(
+  result.trace.toSVG(),
+  /^<svg[^>]*viewBox="0 0 100 100"/,
+  'trace svg',
+);
 
 assert.strictEqual(DIFF_TRACE_PADDING, 10, 'DIFF_TRACE_PADDING named export');
-// Deprecated, but still has to work until the next major.
+// Deprecated, but still has to work until the next major. `tsc -p
+// tsconfig.smoke.json` checks the annotation against the built declarations,
+// so the alias has to keep the literal type it had before TypeScript 6.
+const deprecatedPadding: 10 = imageDiff.DIFF_TRACE_PADDING;
 assert.strictEqual(
-  imageDiff.DIFF_TRACE_PADDING,
+  deprecatedPadding,
   DIFF_TRACE_PADDING,
   'deprecated imageDiff.DIFF_TRACE_PADDING alias',
 );
@@ -67,7 +71,11 @@ assert.strictEqual(
 // The deep imports have to resolve to working code, not just resolve.
 const delta = colorDeltaChannels(0, 0, 0, 255, 255, 255, 255, 255);
 assert.ok(delta > 0.92, `colorDeltaChannels via deep import: ${delta}`);
-assert.strictEqual(viaShortPath, colorDeltaChannels, 'both subpaths are one module');
+assert.strictEqual(
+  viaShortPath,
+  colorDeltaChannels,
+  'both subpaths are one module',
+);
 
 const injected = computeAndInjectDiffs({ image1, image2 });
 assert.strictEqual(
@@ -80,8 +88,28 @@ assert.strictEqual(
 // load from the built package too.
 {
   const grey = [128, 128, 128, 255];
-  const edgeRow = [0, 0, 0, 255, 0, 0, 0, 255, ...grey, 255, 255, 255, 255, 255, 255, 255, 255];
-  const edge = new Uint8ClampedArray(Array.from({ length: 5 }, () => edgeRow).flat());
+  const edgeRow = [
+    0,
+    0,
+    0,
+    255,
+    0,
+    0,
+    0,
+    255,
+    ...grey,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+  ];
+  const edge = new Uint8ClampedArray(
+    Array.from({ length: 5 }, () => edgeRow).flat(),
+  );
   const words = asPixelWords(edge);
   const size = { width: 5, height: 5 };
   assert.strictEqual(
@@ -97,7 +125,7 @@ const thresholded = imageDiff(image1, image2, {
   ignoreAntialiasing: true,
 });
 assert.ok(
-  !thresholded.trace.data.some(v => v > 0),
+  thresholded.trace.data.every((v) => v === 0),
   'nothing traced above the largest possible delta',
 );
 

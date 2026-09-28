@@ -1,18 +1,17 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import path from 'path';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
+import { describe, expect, it } from 'vitest';
 
+import type { ImageInput, RowAlignment } from '../computeAndInjectDiffs.ts';
+import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
 import imageDiff, {
   ALIGNMENT_REPLAY_STAMP,
   REPLAY_REVISION,
 } from '../index.ts';
-import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
-import type { ImageInput, RowAlignment } from '../computeAndInjectDiffs.ts';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function loadImage(name: string): Promise<ImageInput> {
   const image = sharp(path.resolve(__dirname, '../../static', name));
@@ -118,7 +117,6 @@ describe('applying a stored alignment', () => {
       }),
     ).toThrow(/Unknown alignment operation/);
   });
-
 });
 
 describe('the runs themselves', () => {
@@ -159,8 +157,8 @@ function rowsImage(runs: Array<[number, number]>): ImageInput {
 }
 
 /** The first byte of each row, which `rowsImage` makes the row's identity. */
-function rowValues(rows: Uint8ClampedArray[]): number[] {
-  return rows.map(row => row[0]);
+function rowValues(rows: Array<Uint8ClampedArray>): Array<number> {
+  return rows.map((row) => row[0]);
 }
 
 describe('an alignment that simplification rewrites', () => {
@@ -269,7 +267,7 @@ describe('validating runs that came from storage', () => {
     ).toThrow(/Unknown alignment operation/);
   });
 
-  it.each([0, -4, 2.5, NaN])('refuses a length of %s', length => {
+  it.each([0, -4, 2.5, NaN])('refuses a length of %s', (length) => {
     const image1 = rowsImage([[10, 20]]);
     const image2 = rowsImage([[20, 20]]);
 

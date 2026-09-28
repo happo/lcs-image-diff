@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 
-import imageDiff from './src/index.ts';
 import type { ImageInput } from './src/index.ts';
+import imageDiff from './src/index.ts';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 const RUNS_PER_SNAPSHOT = 3;
 
@@ -40,11 +39,12 @@ interface Stats {
   median: number;
 }
 
-function stats(times: number[]): Stats {
-  const sorted = [...times].sort((a, b) => a - b);
+function stats(times: Array<number>): Stats {
+  const sorted = [...times];
+  sorted.sort((a, b) => a - b);
   const mean = times.reduce((a, b) => a + b, 0) / times.length;
-  const min = sorted[0];
-  const max = sorted[sorted.length - 1];
+  const min = Math.min(...times);
+  const max = Math.max(...times);
   const median = sorted[Math.floor(sorted.length / 2)];
   return { mean, min, max, median };
 }
@@ -58,16 +58,18 @@ async function main(): Promise<void> {
   const snapshotsDir = path.resolve(__dirname, 'snapshots');
   const snapshots = fs
     .readdirSync(snapshotsDir)
-    .filter(name => fs.statSync(path.join(snapshotsDir, name)).isDirectory())
-    .sort();
+    .filter((name) => fs.statSync(path.join(snapshotsDir, name)).isDirectory());
+  snapshots.sort((a, b) => a.localeCompare(b));
 
-  console.log(`Profiling ${snapshots.length} snapshots, ${RUNS_PER_SNAPSHOT} runs each\n`);
+  console.log(
+    `Profiling ${snapshots.length} snapshots, ${RUNS_PER_SNAPSHOT} runs each\n`,
+  );
   console.log(
     `${'Snapshot'.padEnd(40)} ${'Runs'.padStart(4)}  ${'Min'.padStart(9)}  ${'Median'.padStart(9)}  ${'Mean'.padStart(9)}  ${'Max'.padStart(9)}  ${'Size'.padStart(15)}`,
   );
   console.log('-'.repeat(105));
 
-  const allResults: Result[] = [];
+  const allResults: Array<Result> = [];
 
   for (const snapshot of snapshots) {
     const beforePath = path.join(snapshotsDir, snapshot, 'before.png');
@@ -85,7 +87,7 @@ async function main(): Promise<void> {
 
     const sizeLabel = `${image1.width}x${image1.height} / ${image2.width}x${image2.height}`;
 
-    const times: number[] = [];
+    const times: Array<number> = [];
     for (let i = 0; i < RUNS_PER_SNAPSHOT; i++) {
       const t0 = performance.now();
       imageDiff(image1, image2, { hashFunction });
@@ -104,15 +106,18 @@ async function main(): Promise<void> {
   // Summary
   const totalMean = allResults.reduce((a, r) => a + r.mean, 0);
   console.log('-'.repeat(105));
-  console.log(`${'TOTAL (sum of means)'.padEnd(40)} ${''.padStart(4)}  ${''.padStart(9)}  ${''.padStart(9)}  ${formatMs(totalMean).padStart(9)}`);
+  console.log(
+    `${'TOTAL (sum of means)'.padEnd(40)} ${''.padStart(4)}  ${''.padStart(9)}  ${''.padStart(9)}  ${formatMs(totalMean).padStart(9)}`,
+  );
 
-  const slowest = [...allResults].sort((a, b) => b.median - a.median)[0];
-  const fastest = [...allResults].sort((a, b) => a.median - b.median)[0];
-  console.log(`\nSlowest: ${slowest.snapshot} (${formatMs(slowest.median)} median)`);
-  console.log(`Fastest: ${fastest.snapshot} (${formatMs(fastest.median)} median)`);
+  const slowest = allResults.reduce((a, r) => (r.median > a.median ? r : a));
+  const fastest = allResults.reduce((a, r) => (r.median < a.median ? r : a));
+  console.log(
+    `\nSlowest: ${slowest.snapshot} (${formatMs(slowest.median)} median)`,
+  );
+  console.log(
+    `Fastest: ${fastest.snapshot} (${formatMs(fastest.median)} median)`,
+  );
 }
 
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+await main();

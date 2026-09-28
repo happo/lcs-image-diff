@@ -71,7 +71,7 @@ const STAMP_FOR_UNSTAMPED_VERSION: ReadonlyMap<
   string,
   Readonly<AlignmentReplayStamp>
 > = new Map(
-  ['4.3.0', '4.4.0', '4.4.1', '4.4.2'].map(version => [
+  ['4.3.0', '4.4.0', '4.4.1', '4.4.2'].map((version) => [
     version,
     Object.freeze({ revision: 1, replayableFrom: 1 }),
   ]),

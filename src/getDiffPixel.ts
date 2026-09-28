@@ -1,6 +1,6 @@
-import compose from './compose.ts';
-import type { ColorLike, Rgba } from './compose.ts';
 import { colorDeltaChannels } from './colorDelta.ts';
+import type { ColorLike, Rgba } from './compose.ts';
+import compose from './compose.ts';
 
 const TRANSPARENT: Rgba = [0, 0, 0, 0];
 
@@ -27,7 +27,7 @@ export interface DiffPixel {
  * the foreground unchanged.
  */
 export function writeDiffPixel(
-  out: Uint8ClampedArray | number[],
+  out: Uint8ClampedArray | Array<number>,
   i: number,
   diff: number,
   r2: number,
@@ -67,7 +67,7 @@ export default function getDiffPixel(
 ): DiffPixel {
   // Compute a score that represents the difference between 2 pixels
   const diff = Math.abs(colorDeltaChannels(r1, g1, b1, a1, r2, g2, b2, a2));
-  const pixel: number[] = [0, 0, 0, 0];
+  const pixel: Array<number> = [0, 0, 0, 0];
   writeDiffPixel(pixel, 0, diff, r2, g2, b2, a2);
   return { diff, pixel };
 }
@@ -83,8 +83,5 @@ export function getUncountedDiffPixel(
   b2: number,
   a2: number,
 ): ColorLike {
-  return compose(
-    UNCOUNTED_TINT,
-    a2 === 0 ? TRANSPARENT : [r2, g2, b2, 140],
-  );
+  return compose(UNCOUNTED_TINT, a2 === 0 ? TRANSPARENT : [r2, g2, b2, 140]);
 }

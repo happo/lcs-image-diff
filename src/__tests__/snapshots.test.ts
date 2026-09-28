@@ -1,11 +1,11 @@
-import crypto from 'crypto';
-import type { BinaryLike } from 'crypto';
-import childProcess from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import childProcess from 'node:child_process';
+import type { BinaryLike } from 'node:crypto';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
+import { describe, expect, it } from 'vitest';
 
 import imageDiff from '../index.ts';
 
@@ -14,12 +14,12 @@ function hashFunction(data: BinaryLike): string {
 }
 
 const snapshots = childProcess
-  .execSync('ls snapshots', { encoding: 'utf-8' })
+  .execSync('ls snapshots', { encoding: 'utf8' })
   .split(/\n/)
   .filter(Boolean);
 
-describe('snapshot tests', { timeout: 60000 }, () => {
-  snapshots.forEach(snapshot => {
+describe('snapshot tests', { timeout: 60_000 }, () => {
+  for (const snapshot of snapshots) {
     it(snapshot, async () => {
       const pathToBefore = path.resolve('snapshots', snapshot, 'before.png');
       const pathToAfter = path.resolve('snapshots', snapshot, 'after.png');
@@ -88,5 +88,5 @@ describe('snapshot tests', { timeout: 60000 }, () => {
       }
       expect(diffHash).toEqual(expectedHash);
     });
-  });
+  }
 });

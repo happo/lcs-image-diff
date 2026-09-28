@@ -1,8 +1,8 @@
 import { asPixelWords, isAntialiased } from './antialiasing.ts';
+import { colorDeltaChannels } from './colorDelta.ts';
 import type { Rgba } from './compose.ts';
 import DiffTrace from './DiffTrace.ts';
 import { flatPixels } from './flatRows.ts';
-import { colorDeltaChannels } from './colorDelta.ts';
 import { getUncountedDiffPixel, writeDiffPixel } from './getDiffPixel.ts';
 
 const GREEN: Rgba = [106, 133, 0, 255];
@@ -47,8 +47,8 @@ export default function createDiffImage({
   threshold = 0,
   ignoreAntialiasing = false,
 }: {
-  image1Data: Uint8ClampedArray[];
-  image2Data: Uint8ClampedArray[];
+  image1Data: Array<Uint8ClampedArray>;
+  image2Data: Array<Uint8ClampedArray>;
 } & ChangedPixelOptions): DiffImage {
   // Images have the same width and height here
   const width = image1Data[0].length;
@@ -116,12 +116,9 @@ export default function createDiffImage({
       const dataIndex = getDataIndex(row, width, index);
 
       if (counted) {
-        let diffColor = MAGENTA;
-        if (addedRow) {
-          // Pixel is transparent in previous image, which means that a row was
-          // added here.
-          diffColor = GREEN;
-        }
+        // A pixel transparent in the previous image means that a row was
+        // added here.
+        const diffColor = addedRow ? GREEN : MAGENTA;
 
         trace.diff({ row, index, color: diffColor });
       }

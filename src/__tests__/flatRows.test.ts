@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { asPixelWords } from '../antialiasing.ts';
 import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
@@ -17,7 +17,7 @@ function solidImage(width: number, height: number, value: number) {
 function stripes(width: number, height: number, offset = 0) {
   const data = new Uint8ClampedArray(width * height * 4);
   for (let y = 0; y < height; y++) {
-    data.fill((y + offset) * 7 % 256, y * width * 4, (y + 1) * width * 4);
+    data.fill(((y + offset) * 7) % 256, y * width * 4, (y + 1) * width * 4);
     for (let x = 0; x < width; x++) {
       data[(y * width + x) * 4 + 3] = 255;
     }
@@ -25,15 +25,15 @@ function stripes(width: number, height: number, offset = 0) {
   return { data, width, height };
 }
 
-function expectContiguous(rows: Uint8ClampedArray[]) {
+function expectContiguous(rows: Array<Uint8ClampedArray>) {
   const rowBytes = rows[0].byteLength;
   const { buffer } = rows[0];
   expect(rows[0].byteOffset % 4).toBe(0);
   expect(buffer.byteLength).toBe(rowBytes * rows.length);
-  rows.forEach((row, i) => {
+  for (const [i, row] of rows.entries()) {
     expect(row.buffer).toBe(buffer);
     expect(row.byteOffset).toBe(rows[0].byteOffset + i * rowBytes);
-  });
+  }
 }
 
 describe('packRows', () => {
@@ -53,10 +53,13 @@ describe('packRows', () => {
 
   it('pads rows narrower than the width asked for with filler', () => {
     const flat = new Uint8ClampedArray([1, 2, 3, 4, 5, 6, 7, 8]);
-    const rows = [flat.subarray(0, 4), new Uint8ClampedArray([9, 9, 9, 9, 9, 9, 9, 9])];
+    const rows = [
+      flat.subarray(0, 4),
+      new Uint8ClampedArray([9, 9, 9, 9, 9, 9, 9, 9]),
+    ];
     const packed = packRows(rows, flat.buffer, 8);
     expectContiguous(packed);
-    expect(packed.map(row => Array.from(row))).toEqual([
+    expect(packed.map((row) => Array.from(row))).toEqual([
       [1, 2, 3, 4, 1, 1, 1, 1],
       [9, 9, 9, 9, 9, 9, 9, 9],
     ]);
@@ -77,7 +80,7 @@ describe('packRows', () => {
     ];
     const packed = packRows(rows);
     expectContiguous(packed);
-    expect(packed.map(row => Array.from(row))).toEqual([
+    expect(packed.map((row) => Array.from(row))).toEqual([
       [1, 2, 3, 4],
       [5, 6, 7, 8],
     ]);
@@ -113,7 +116,9 @@ describe('computeAndInjectDiffs', () => {
     });
     expect(image1Data[0].buffer).not.toBe(image1.data.buffer);
     expect(image2Data[0].buffer).not.toBe(image2.data.buffer);
-    image1Data.forEach(row => row.fill(9));
+    for (const row of image1Data) {
+      row.fill(9);
+    }
     expect(Array.from(image1.data)).toEqual(original);
   });
 
@@ -167,24 +172,27 @@ describe('computeAndInjectDiffs', () => {
 describe('computeAndInjectDiffs, counting what it allocates', () => {
   // Every buffer of at least `minBytes` created while `run` runs. Views onto
   // an existing buffer are not allocations and are not counted.
-  function bigAllocations(minBytes: number, run: () => void): number[] {
-    const Original = globalThis.Uint8ClampedArray;
-    const sizes: number[] = [];
+  function bigAllocations(minBytes: number, run: () => void): Array<number> {
+    const Original = Uint8ClampedArray;
+    const sizes: Array<number> = [];
     class Counting extends Original {
-      constructor(...args: unknown[]) {
+      constructor(...args: Array<unknown>) {
         // @ts-expect-error -- forwards whichever overload was called
         super(...args);
-        if (!ArrayBuffer.isView(args[0]) && !(args[0] instanceof ArrayBuffer) &&
-          this.byteLength >= minBytes) {
+        if (
+          !ArrayBuffer.isView(args[0]) &&
+          !(args[0] instanceof ArrayBuffer) &&
+          this.byteLength >= minBytes
+        ) {
           sizes.push(this.byteLength);
         }
       }
     }
-    globalThis.Uint8ClampedArray = Counting as typeof Uint8ClampedArray;
+    vi.stubGlobal('Uint8ClampedArray', Counting);
     try {
       run();
     } finally {
-      globalThis.Uint8ClampedArray = Original;
+      vi.unstubAllGlobals();
     }
     return sizes;
   }
@@ -221,8 +229,8 @@ describe('createDiffImage with ignoreAntialiasing', () => {
       image2: stripes(6, 36, 3),
     });
     const copies = {
-      image1Data: aligned.image1Data.map(row => row.slice()),
-      image2Data: aligned.image2Data.map(row => row.slice()),
+      image1Data: aligned.image1Data.map((row) => row.slice()),
+      image2Data: aligned.image2Data.map((row) => row.slice()),
     };
 
     const shared = createDiffImage({ ...aligned, ignoreAntialiasing: true });

@@ -16,51 +16,26 @@ function test(
 }
 
 it('handles additions and deletions', () => {
-  test(
-    'ACBDEA',
-    'ABCDA',
-    'A+CBDEA',
-    'ABC+D+A',
-  );
+  test('ACBDEA', 'ABCDA', 'A+CBDEA', 'ABC+D+A');
 });
 
 describe('different start', () => {
   it('works when start is different', () => {
-    test(
-      'ZACBDEA',
-      'XABCDA',
-      'ZA+CBDEA',
-      'XABC+D+A',
-    );
+    test('ZACBDEA', 'XABCDA', 'ZA+CBDEA', 'XABC+D+A');
   });
 
   it('works when B has deletions in the start', () => {
-    test(
-      'AA',
-      'XAA',
-      '+AA',
-      'XAA',
-    );
+    test('AA', 'XAA', '+AA', 'XAA');
   });
 });
 
 describe('completely different', () => {
   it('works when A is longer', () => {
-    test(
-      'CCCBBBCCC',
-      'AAAA',
-      'CCCBBBCCC',
-      '+++++AAAA',
-    );
+    test('CCCBBBCCC', 'AAAA', 'CCCBBBCCC', '+++++AAAA');
   });
 
   it('works when B is longer', () => {
-    test(
-      'AAAA',
-      'CCCBBBCCC',
-      '+++++AAAA',
-      'CCCBBBCCC',
-    );
+    test('AAAA', 'CCCBBBCCC', '+++++AAAA', 'CCCBBBCCC');
   });
 });
 
@@ -79,7 +54,7 @@ it('aligns content shifted far enough to cross many stripes', () => {
   alignArrays(a, b);
 
   expect(a).toHaveLength(b.length);
-  expect(a.slice(0, 400)).toEqual(new Array(400).fill('+'));
+  expect(a.slice(0, 400)).toEqual(Array.from({ length: 400 }, () => '+'));
   expect(a.slice(400)).toEqual(common);
   expect(b).toEqual([...inserted, ...common]);
 });

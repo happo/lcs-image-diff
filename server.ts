@@ -1,31 +1,29 @@
 #!/usr/bin/env node
 
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import http from 'http';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 // `PORT=0` asks for an ephemeral port, so only fall back when the variable
 // is absent -- `Number(...) || 3456` would turn that 0 back into 3456.
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3456;
-const SNAPSHOTS_DIR = join(__dirname, 'snapshots');
+const SNAPSHOTS_DIR = path.join(__dirname, 'snapshots');
 
-function getSnapshots(): string[] {
-  return fs
-    .readdirSync(SNAPSHOTS_DIR)
-    .filter((name: string) => {
-      const dir = path.join(SNAPSHOTS_DIR, name);
-      return (
-        fs.statSync(dir).isDirectory() &&
-        fs.existsSync(path.join(dir, 'before.png')) &&
-        fs.existsSync(path.join(dir, 'after.png'))
-      );
-    })
-    .sort();
+function getSnapshots(): Array<string> {
+  const snapshots = fs.readdirSync(SNAPSHOTS_DIR).filter((name: string) => {
+    const dir = path.join(SNAPSHOTS_DIR, name);
+    return (
+      fs.statSync(dir).isDirectory() &&
+      fs.existsSync(path.join(dir, 'before.png')) &&
+      fs.existsSync(path.join(dir, 'after.png'))
+    );
+  });
+  snapshots.sort((a, b) => a.localeCompare(b));
+  return snapshots;
 }
 
 const HTML = `<!DOCTYPE html>
@@ -237,7 +235,9 @@ const server = http.createServer((req, res) => {
   }
 
   // Serve snapshot images: /snapshots/<name>/<file>.png
-  const snapshotMatch = pathname.match(/^\/snapshots\/([^/]+)\/(before|after|diff)\.png$/);
+  const snapshotMatch = pathname.match(
+    /^\/snapshots\/([^/]+)\/(before|after|diff)\.png$/,
+  );
   if (snapshotMatch) {
     const [, name, file] = snapshotMatch;
     const filePath = path.join(SNAPSHOTS_DIR, name, `${file}.png`);
@@ -265,6 +265,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   // With PORT=0 the interesting number is the one the OS picked, not the 0.
   const address = server.address();
-  const port = typeof address === 'object' && address !== null ? address.port : PORT;
+  const port =
+    typeof address === 'object' && address !== null ? address.port : PORT;
   console.log(`Diff viewer running at http://localhost:${port}`);
 });

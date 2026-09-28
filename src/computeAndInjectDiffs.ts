@@ -1,8 +1,8 @@
-import alignArrays, { PLACEHOLDER } from './alignArrays.ts';
 import type { RowKey } from './alignArrays.ts';
+import alignArrays, { PLACEHOLDER } from './alignArrays.ts';
+import type { ColorLike } from './compose.ts';
 import compose from './compose.ts';
 import { FILLER, packRows } from './flatRows.ts';
-import type { ColorLike } from './compose.ts';
 import similarEnough from './similarEnough.ts';
 
 /** The raw image, as browsers (`ImageData`) and Node bitmaps both supply it. */
@@ -21,7 +21,7 @@ export type HashFunction = (row: Uint8ClampedArray) => RowKey;
 function imageTo2DArray(
   { data, width, height }: ImageInput,
   paddingRight: number,
-): Uint8ClampedArray[] {
+): Array<Uint8ClampedArray> {
   // The imageData is a 1D array. Each element in the array corresponds to a
   // decimal value that represents one of the RGBA channels for that pixel.
   const rowSize = width * 4;
@@ -59,7 +59,7 @@ function imageTo2DArray(
       pixels.byteOffset,
       rowSize * height,
     );
-    const rows: Uint8ClampedArray[] = [];
+    const rows: Array<Uint8ClampedArray> = [];
     for (let row = 0; row < height; row += 1) {
       rows.push(view.subarray(row * rowSize, (row + 1) * rowSize));
     }
@@ -72,7 +72,7 @@ function imageTo2DArray(
   const paddedRowSize = rowSize + padSize;
   const flat = new Uint8ClampedArray(paddedRowSize * height);
 
-  const newData: Uint8ClampedArray[] = [];
+  const newData: Array<Uint8ClampedArray> = [];
   for (let row = 0; row < height; row += 1) {
     const pixelsInRow = flat.subarray(
       row * paddedRowSize,
@@ -106,6 +106,9 @@ export function hashRowWithBuffer(row: Bytes): string {
 export function hashRowWithCharCodes(row: Bytes): string {
   let result = '';
   for (let i = 0; i < row.length; i += CHARS_PER_CALL) {
+    // These are bytes, not text, so there are no code points above 0xFFFF for
+    // fromCodePoint to handle -- and it is about 40% slower here.
+    // eslint-disable-next-line unicorn/prefer-code-point
     result += String.fromCharCode(...row.subarray(i, i + CHARS_PER_CALL));
   }
   return result;
@@ -122,17 +125,26 @@ export const rowsEqualWithBuffer = (a: Uint8Array, b: Uint8Array): boolean =>
   Buffer.compare(a, b) === 0;
 
 /** Compares two rows in full, without Node's `Buffer`. */
-export const rowsEqualInJavaScript = (a: Uint8Array, b: Uint8Array): boolean => {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
+export const rowsEqualInJavaScript = (
+  a: Uint8Array,
+  b: Uint8Array,
+): boolean => {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
   return true;
 };
 
 const defaultRowsEqual =
-  typeof Buffer !== 'undefined' ? rowsEqualWithBuffer : rowsEqualInJavaScript;
+  typeof Buffer === 'undefined' ? rowsEqualInJavaScript : rowsEqualWithBuffer;
 
 const defaultHashRow =
-  typeof Buffer !== 'undefined' ? hashRowWithBuffer : hashRowWithCharCodes;
+  typeof Buffer === 'undefined' ? hashRowWithCharCodes : hashRowWithBuffer;
 
 // How far apart the bytes are that decide which rows are worth comparing.
 // Sampling is what makes this cheap, and being wrong only costs a comparison,
@@ -150,18 +162,24 @@ function fingerprint(row: Uint8ClampedArray, padBytes: number): number {
   const length = row.length + padBytes;
   let result = length;
   let i = 0;
+  // `| 0` wraps the hash to 32 bits. `Math.trunc` would not, so it is not
+  // what unicorn/prefer-math-trunc takes it for.
+  /* eslint-disable unicorn/prefer-math-trunc */
   for (; i < row.length; i += FINGERPRINT_STRIDE) {
     result = (Math.imul(result, 31) + row[i]) | 0;
   }
   for (; i < length; i += FINGERPRINT_STRIDE) {
     result = (Math.imul(result, 31) + FILLER) | 0;
   }
+  /* eslint-enable unicorn/prefer-math-trunc */
   return result;
 }
 
 function isFiller(bytes: Uint8Array, from: number): boolean {
   for (let i = from; i < bytes.length; i += 1) {
-    if (bytes[i] !== FILLER) return false;
+    if (bytes[i] !== FILLER) {
+      return false;
+    }
   }
   return true;
 }
@@ -172,7 +190,7 @@ export interface InternerOptions {
 }
 
 interface Group {
-  candidates: { bytes: Uint8Array; padBytes: number; id: number }[];
+  candidates: Array<{ bytes: Uint8Array; padBytes: number; id: number }>;
   byContents: Map<string, number> | null;
 }
 
@@ -211,7 +229,7 @@ export function createInterner({
   hashRow = defaultHashRow,
 }: InternerOptions = {}): HashFunction {
   const intern = createPaddedIntern({ rowsEqual, hashRow });
-  const hashFunction: HashFunction = row => intern(row, 0);
+  const hashFunction: HashFunction = (row) => intern(row, 0);
   paddedInterns.set(hashFunction, intern);
   return hashFunction;
 }
@@ -232,8 +250,12 @@ function createPaddedIntern({
     b: Uint8Array,
     bPad: number,
   ): boolean => {
-    if (aPad === bPad) return rowsEqual(a, b);
-    if (a.length + aPad !== b.length + bPad) return false;
+    if (aPad === bPad) {
+      return rowsEqual(a, b);
+    }
+    if (a.length + aPad !== b.length + bPad) {
+      return false;
+    }
     const shorter = a.length < b.length ? a : b;
     const longer = a.length < b.length ? b : a;
     return (
@@ -247,9 +269,13 @@ function createPaddedIntern({
   // is a string and keeps nothing of it.
   let scratch = new Uint8Array(0);
   const keyOf = (bytes: Uint8Array, padBytes: number): string => {
-    if (padBytes === 0) return hashRow(bytes);
+    if (padBytes === 0) {
+      return hashRow(bytes);
+    }
     const length = bytes.length + padBytes;
-    if (scratch.length !== length) scratch = new Uint8Array(length);
+    if (scratch.length !== length) {
+      scratch = new Uint8Array(length);
+    }
     scratch.set(bytes);
     scratch.fill(FILLER, bytes.length);
     return hashRow(scratch);
@@ -289,7 +315,7 @@ function createPaddedIntern({
 
     if (group.candidates.length >= MAX_CANDIDATES) {
       group.byContents = new Map(
-        group.candidates.map(candidate => [
+        group.candidates.map((candidate) => [
           keyOf(candidate.bytes, candidate.padBytes),
           candidate.id,
         ]),
@@ -341,14 +367,18 @@ function nonMatch(): object {
 }
 
 function toUniqueHashes(
-  hashes1: RowKey[],
-  hashes2: RowKey[],
-): [RowKey[], RowKey[]] {
+  hashes1: Array<RowKey>,
+  hashes2: Array<RowKey>,
+): [Array<RowKey>, Array<RowKey>] {
   const counts1 = new Map<RowKey, number>();
   const counts2 = new Map<RowKey, number>();
-  for (const h of hashes1) counts1.set(h, (counts1.get(h) || 0) + 1);
-  for (const h of hashes2) counts2.set(h, (counts2.get(h) || 0) + 1);
-  const unique1 = hashes1.map(h => {
+  for (const h of hashes1) {
+    counts1.set(h, (counts1.get(h) || 0) + 1);
+  }
+  for (const h of hashes2) {
+    counts2.set(h, (counts2.get(h) || 0) + 1);
+  }
+  const unique1 = hashes1.map((h) => {
     const c1 = counts1.get(h);
     const c2 = counts2.get(h);
     return c1 !== undefined &&
@@ -358,7 +388,7 @@ function toUniqueHashes(
       ? h
       : nonMatch();
   });
-  const unique2 = hashes2.map(h => {
+  const unique2 = hashes2.map((h) => {
     const c1 = counts1.get(h);
     const c2 = counts2.get(h);
     return c2 !== undefined &&
@@ -398,13 +428,13 @@ type NeutralRow = Record<string, never>;
 
 /** A gap block: rows one image has and the other does not. */
 type GapSegment =
-  | { type: 'before'; rows: BeforeRow[] }
-  | { type: 'after'; rows: AfterRow[] };
+  | { type: 'before'; rows: Array<BeforeRow> }
+  | { type: 'after'; rows: Array<AfterRow> };
 
 type Segment =
   | GapSegment
-  | { type: 'neutral'; rows: NeutralRow[] }
-  | { type: 'match'; rows: MatchRow[] };
+  | { type: 'neutral'; rows: Array<NeutralRow> }
+  | { type: 'match'; rows: Array<MatchRow> };
 
 /**
  * Builds a segment list from the aligned hash arrays. Each segment describes a
@@ -418,51 +448,83 @@ type Segment =
  * reordered or dropped during simplification without losing track of which
  * pixel data to use.
  */
-function buildSegments(unique1: RowKey[], unique2: RowKey[]): Segment[] {
+function buildSegments(
+  unique1: Array<RowKey>,
+  unique2: Array<RowKey>,
+): Array<Segment> {
   const PH: RowKey = PLACEHOLDER;
-  const segments: Segment[] = [];
+  const segments: Array<Segment> = [];
   let i1 = 0;
   let i2 = 0;
 
   function typeOf(u1: RowKey, u2: RowKey): SegmentType {
-    if (u1 === PH && u2 !== PH) return 'before';
-    if (u1 !== PH && u2 === PH) return 'after';
-    if (u1 === PH && u2 === PH) return 'neutral';
+    if (u1 === PH && u2 !== PH) {
+      return 'before';
+    }
+    if (u1 !== PH && u2 === PH) {
+      return 'after';
+    }
+    if (u1 === PH && u2 === PH) {
+      return 'neutral';
+    }
     return 'match';
   }
 
-  for (let i = 0; i < unique1.length; ) {
+  for (let i = 0; i < unique1.length;) {
     const type = typeOf(unique1[i], unique2[i]);
 
     // How long this run is. Counting first lets each branch below fill an
     // array of its own row shape.
     const start = i;
-    while (i < unique1.length && typeOf(unique1[i], unique2[i]) === type) i++;
+    while (i < unique1.length && typeOf(unique1[i], unique2[i]) === type) {
+      i++;
+    }
     const length = i - start;
 
-    if (type === 'before') {
-      const rows: BeforeRow[] = [];
-      for (let n = 0; n < length; n++) rows.push({ i2: i2++ });
-      segments.push({ type, rows });
-    } else if (type === 'after') {
-      const rows: AfterRow[] = [];
-      for (let n = 0; n < length; n++) rows.push({ i1: i1++ });
-      segments.push({ type, rows });
-    } else if (type === 'neutral') {
-      const rows: NeutralRow[] = [];
-      for (let n = 0; n < length; n++) rows.push({});
-      segments.push({ type, rows });
-    } else {
-      const rows: MatchRow[] = [];
-      for (let n = 0; n < length; n++) rows.push({ i1: i1++, i2: i2++ });
-      segments.push({ type, rows });
+    switch (type) {
+      case 'before': {
+        const rows: Array<BeforeRow> = [];
+        for (let n = 0; n < length; n++) {
+          rows.push({ i2: i2++ });
+        }
+        segments.push({ type, rows });
+
+        break;
+      }
+      case 'after': {
+        const rows: Array<AfterRow> = [];
+        for (let n = 0; n < length; n++) {
+          rows.push({ i1: i1++ });
+        }
+        segments.push({ type, rows });
+
+        break;
+      }
+      case 'neutral': {
+        const rows: Array<NeutralRow> = [];
+        for (let n = 0; n < length; n++) {
+          rows.push({});
+        }
+        segments.push({ type, rows });
+
+        break;
+      }
+      default: {
+        const rows: Array<MatchRow> = [];
+        for (let n = 0; n < length; n++) {
+          rows.push({ i1: i1++, i2: i2++ });
+        }
+        segments.push({ type, rows });
+      }
     }
   }
   return segments;
 }
 
 function isOppositeType(t1: SegmentType, t2: SegmentType): boolean {
-  return (t1 === 'before' && t2 === 'after') || (t1 === 'after' && t2 === 'before');
+  return (
+    (t1 === 'before' && t2 === 'after') || (t1 === 'after' && t2 === 'before')
+  );
 }
 
 /**
@@ -525,10 +587,10 @@ const SEGMENT_FOR_OP = new Map<string, SegmentType>([
   ['m', 'match'],
 ]);
 
-function runsFromSegments(segments: Segment[]): RowAlignment {
+function runsFromSegments(segments: Array<Segment>): RowAlignment {
   return segments
-    .filter(segment => segment.rows.length > 0)
-    .map(segment => [OP_FOR_SEGMENT[segment.type], segment.rows.length]);
+    .filter((segment) => segment.rows.length > 0)
+    .map((segment) => [OP_FOR_SEGMENT[segment.type], segment.rows.length]);
 }
 
 /**
@@ -540,8 +602,8 @@ function runsFromSegments(segments: Segment[]): RowAlignment {
  * `buildSegments` followed by `simplifySegments` produced, without running
  * either of them -- or the LCS in front of them.
  */
-function segmentsFromRuns(alignment: RowAlignment): Segment[] {
-  const segments: Segment[] = [];
+function segmentsFromRuns(alignment: RowAlignment): Array<Segment> {
+  const segments: Array<Segment> = [];
   let i1 = 0;
   let i2 = 0;
 
@@ -558,22 +620,41 @@ function segmentsFromRuns(alignment: RowAlignment): Segment[] {
       );
     }
 
-    if (type === 'before') {
-      const rows: BeforeRow[] = [];
-      for (let n = 0; n < length; n++) rows.push({ i2: i2++ });
-      segments.push({ type, rows });
-    } else if (type === 'after') {
-      const rows: AfterRow[] = [];
-      for (let n = 0; n < length; n++) rows.push({ i1: i1++ });
-      segments.push({ type, rows });
-    } else if (type === 'neutral') {
-      const rows: NeutralRow[] = [];
-      for (let n = 0; n < length; n++) rows.push({});
-      segments.push({ type, rows });
-    } else {
-      const rows: MatchRow[] = [];
-      for (let n = 0; n < length; n++) rows.push({ i1: i1++, i2: i2++ });
-      segments.push({ type, rows });
+    switch (type) {
+      case 'before': {
+        const rows: Array<BeforeRow> = [];
+        for (let n = 0; n < length; n++) {
+          rows.push({ i2: i2++ });
+        }
+        segments.push({ type, rows });
+
+        break;
+      }
+      case 'after': {
+        const rows: Array<AfterRow> = [];
+        for (let n = 0; n < length; n++) {
+          rows.push({ i1: i1++ });
+        }
+        segments.push({ type, rows });
+
+        break;
+      }
+      case 'neutral': {
+        const rows: Array<NeutralRow> = [];
+        for (let n = 0; n < length; n++) {
+          rows.push({});
+        }
+        segments.push({ type, rows });
+
+        break;
+      }
+      default: {
+        const rows: Array<MatchRow> = [];
+        for (let n = 0; n < length; n++) {
+          rows.push({ i1: i1++, i2: i2++ });
+        }
+        segments.push({ type, rows });
+      }
     }
   }
 
@@ -589,7 +670,7 @@ function segmentsFromRuns(alignment: RowAlignment): Segment[] {
  *     are merged into a single contiguous gap block (the match rows are kept
  *     but shifted to come after the merged gap).
  */
-function simplifySegments(segments: Segment[], threshold: number): void {
+function simplifySegments(segments: Array<Segment>, threshold: number): void {
   let changed = true;
   while (changed) {
     changed = false;
@@ -603,26 +684,37 @@ function simplifySegments(segments: Segment[], threshold: number): void {
         if (n > 0) {
           s1.rows.splice(s1.rows.length - n);
           s2.rows.splice(0, n);
-          if (s2.rows.length === 0) segments.splice(s + 1, 1);
-          if (s1.rows.length === 0) segments.splice(s, 1);
+          if (s2.rows.length === 0) {
+            segments.splice(s + 1, 1);
+          }
+          if (s1.rows.length === 0) {
+            segments.splice(s, 1);
+          }
           changed = true;
           break;
         }
       }
     }
-    if (changed) continue;
+    if (changed) {
+      continue;
+    }
 
     // Combine or cancel gap blocks separated by a small match segment
     for (let s = 0; s < segments.length - 2; s++) {
-      const s1 = segments[s];
       const sm = segments[s + 1];
-      const s3 = segments[s + 2];
 
-      if (sm.type !== 'match' || sm.rows.length > threshold) continue;
+      if (sm.type !== 'match' || sm.rows.length > threshold) {
+        continue;
+      }
+
+      const s1 = segments[s];
+      const s3 = segments[s + 2];
 
       // Combine: two same-direction gaps -> merge them, keep match rows after
       if (s1.type === 'before' && s3.type === 'before') {
-        segments.splice(s, 3,
+        segments.splice(
+          s,
+          3,
           { type: 'before', rows: [...s1.rows, ...s3.rows] },
           { type: 'match', rows: sm.rows },
         );
@@ -630,7 +722,9 @@ function simplifySegments(segments: Segment[], threshold: number): void {
         break;
       }
       if (s1.type === 'after' && s3.type === 'after') {
-        segments.splice(s, 3,
+        segments.splice(
+          s,
+          3,
           { type: 'after', rows: [...s1.rows, ...s3.rows] },
           { type: 'match', rows: sm.rows },
         );
@@ -644,10 +738,14 @@ function simplifySegments(segments: Segment[], threshold: number): void {
         if (n > 0) {
           s1.rows.splice(s1.rows.length - n);
           s3.rows.splice(0, n);
-          const newSegs: Segment[] = [];
-          if (s1.rows.length > 0) newSegs.push(s1);
+          const newSegs: Array<Segment> = [];
+          if (s1.rows.length > 0) {
+            newSegs.push(s1);
+          }
           newSegs.push(sm);
-          if (s3.rows.length > 0) newSegs.push(s3);
+          if (s3.rows.length > 0) {
+            newSegs.push(s3);
+          }
           segments.splice(s, 3, ...newSegs);
           changed = true;
           break;
@@ -658,8 +756,8 @@ function simplifySegments(segments: Segment[], threshold: number): void {
 }
 
 interface ReconstructedImages {
-  out1: Uint8ClampedArray[];
-  out2: Uint8ClampedArray[];
+  out1: Array<Uint8ClampedArray>;
+  out2: Array<Uint8ClampedArray>;
   injected1: Set<number>;
   injected2: Set<number>;
 }
@@ -670,15 +768,15 @@ interface ReconstructedImages {
  * removed during simplification are simply omitted from the output.
  */
 function reconstructImages(
-  segments: Segment[],
-  image1Data: Uint8ClampedArray[],
-  image2Data: Uint8ClampedArray[],
+  segments: Array<Segment>,
+  image1Data: Array<Uint8ClampedArray>,
+  image2Data: Array<Uint8ClampedArray>,
   image1Bg: ColorLike,
   image2Bg: ColorLike,
   maxWidth: number,
 ): ReconstructedImages {
-  const out1: Uint8ClampedArray[] = [];
-  const out2: Uint8ClampedArray[] = [];
+  const out1: Array<Uint8ClampedArray> = [];
+  const out2: Array<Uint8ClampedArray> = [];
 
   // Which rows of each result were injected here rather than taken from the
   // image. This cannot be recovered from the pixels afterwards: an injected
@@ -688,30 +786,41 @@ function reconstructImages(
   const injected2 = new Set<number>();
 
   for (const seg of segments) {
-    if (seg.type === 'before') {
-      for (const row of seg.rows) {
-        injected1.add(out1.length);
-        out1.push(transparentLine(image1Bg, maxWidth));
-        out2.push(image2Data[row.i2]);
+    switch (seg.type) {
+      case 'before': {
+        for (const row of seg.rows) {
+          injected1.add(out1.length);
+          out1.push(transparentLine(image1Bg, maxWidth));
+          out2.push(image2Data[row.i2]);
+        }
+
+        break;
       }
-    } else if (seg.type === 'after') {
-      for (const row of seg.rows) {
-        injected2.add(out1.length);
-        out1.push(image1Data[row.i1]);
-        out2.push(transparentLine(image2Bg, maxWidth));
+      case 'after': {
+        for (const row of seg.rows) {
+          injected2.add(out1.length);
+          out1.push(image1Data[row.i1]);
+          out2.push(transparentLine(image2Bg, maxWidth));
+        }
+
+        break;
       }
-    } else if (seg.type === 'neutral') {
-      for (let n = 0; n < seg.rows.length; n++) {
-        const y = out1.length;
-        injected1.add(y);
-        injected2.add(y);
-        out1.push(transparentLine(image1Bg, maxWidth));
-        out2.push(transparentLine(image2Bg, maxWidth));
+      case 'neutral': {
+        for (const _row of seg.rows) {
+          const y = out1.length;
+          injected1.add(y);
+          injected2.add(y);
+          out1.push(transparentLine(image1Bg, maxWidth));
+          out2.push(transparentLine(image2Bg, maxWidth));
+        }
+
+        break;
       }
-    } else {
-      for (const row of seg.rows) {
-        out1.push(image1Data[row.i1]);
-        out2.push(image2Data[row.i2]);
+      default: {
+        for (const row of seg.rows) {
+          out1.push(image1Data[row.i1]);
+          out2.push(image2Data[row.i2]);
+        }
       }
     }
   }
@@ -725,12 +834,12 @@ function reconstructImages(
  * as far as `key` and the rest of the aligner are concerned.
  */
 interface RowSource {
-  rows: Uint8ClampedArray[];
+  rows: Array<Uint8ClampedArray>;
   padBytes: number;
   key: (
     row: Uint8ClampedArray,
     index: number,
-    rows: Uint8ClampedArray[],
+    rows: Array<Uint8ClampedArray>,
   ) => RowKey;
 }
 
@@ -849,13 +958,24 @@ function assertAlignmentFits(
     }
 
     outputRows += length;
-    if (type === 'match') {
-      rows1 += length;
-      rows2 += length;
-    } else if (type === 'after') {
-      rows1 += length;
-    } else if (type === 'before') {
-      rows2 += length;
+    switch (type) {
+      case 'match': {
+        rows1 += length;
+        rows2 += length;
+
+        break;
+      }
+      case 'after': {
+        rows1 += length;
+
+        break;
+      }
+      case 'before': {
+        rows2 += length;
+
+        break;
+      }
+      // No default
     }
 
     // `neutral` consumes from neither image, so it moves `outputRows` alone and
@@ -886,7 +1006,7 @@ function assertAlignmentFits(
  * from, the images they produce are built by this one function.
  */
 function applySegments(
-  segments: Segment[],
+  segments: Array<Segment>,
   image1: RowSource,
   image2: RowSource,
   maxWidth: number,
@@ -897,7 +1017,12 @@ function applySegments(
   const image2Bg = firstPixel(image2Data[0], image2.padBytes);
 
   const { out1, out2, injected1, injected2 } = reconstructImages(
-    segments, image1Data, image2Data, image1Bg, image2Bg, maxWidth,
+    segments,
+    image1Data,
+    image2Data,
+    image1Bg,
+    image2Bg,
+    maxWidth,
   );
 
   // Mutate in place to match the existing API contract. The rows are still
@@ -905,8 +1030,12 @@ function applySegments(
   // one buffer per image once, at the end.
   image1Data.length = 0;
   image2Data.length = 0;
-  for (const row of out1) image1Data.push(row);
-  for (const row of out2) image2Data.push(row);
+  for (const row of out1) {
+    image1Data.push(row);
+  }
+  for (const row of out2) {
+    image2Data.push(row);
+  }
 
   return { injected1, injected2 };
 }
@@ -919,7 +1048,9 @@ function firstPixel(
   row: Uint8ClampedArray,
   padBytes: number,
 ): Uint8ClampedArray {
-  if (row.length >= 4 || padBytes === 0) return row.slice(0, 4);
+  if (row.length >= 4 || padBytes === 0) {
+    return row.slice(0, 4);
+  }
   const pixel = new Uint8ClampedArray(4).fill(FILLER);
   pixel.set(row);
   return pixel;
@@ -930,7 +1061,7 @@ function firstPixel(
  * `rowBytes` long. Rows that are short of that are padded here.
  */
 function materialize(
-  rows: Uint8ClampedArray[],
+  rows: Array<Uint8ClampedArray>,
   input: ImageInput['data'],
   rowBytes: number,
 ): void {
@@ -940,7 +1071,9 @@ function materialize(
     return;
   }
   rows.length = 0;
-  for (const row of packed) rows.push(row);
+  for (const row of packed) {
+    rows.push(row);
+  }
 }
 
 export interface ComputeAndInjectDiffsOptions {
@@ -971,8 +1104,8 @@ export interface ComputeAndInjectDiffsOptions {
 }
 
 export interface ComputeAndInjectDiffsResult {
-  image1Data: Uint8ClampedArray[];
-  image2Data: Uint8ClampedArray[];
+  image1Data: Array<Uint8ClampedArray>;
+  image2Data: Array<Uint8ClampedArray>;
   image1InjectedRows: Set<number>;
   image2InjectedRows: Set<number>;
   /**
@@ -1016,7 +1149,6 @@ export default function computeAndInjectDiffs({
   const padUpFront = intern === undefined && storedAlignment === undefined;
 
   const source = (image: ImageInput): RowSource => {
-    const padBytes = (maxWidth - image.width) * 4;
     if (padUpFront) {
       return {
         rows: imageTo2DArray(image, maxWidth - image.width),
@@ -1024,10 +1156,11 @@ export default function computeAndInjectDiffs({
         key: hashFunction,
       };
     }
+    const padBytes = (maxWidth - image.width) * 4;
     return {
       rows: imageTo2DArray(image, 0),
       padBytes,
-      key: intern ? row => intern(row, padBytes) : hashFunction,
+      key: intern ? (row) => intern(row, padBytes) : hashFunction,
     };
   };
 

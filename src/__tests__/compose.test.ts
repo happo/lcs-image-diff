@@ -1,20 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import compose from '../compose.ts';
 import type { ColorLike } from '../compose.ts';
+import compose from '../compose.ts';
 
 let subject: () => ColorLike;
-let foreground: number[];
-let background: number[];
+let foreground: Array<number>;
+let background: Array<number>;
 
 beforeEach(() => {
   foreground = [100, 100, 100, 100];
   background = [255, 255, 255, 255];
-  subject = () =>
-    compose(
-      foreground,
-      background,
-    );
+  subject = () => compose(foreground, background);
 });
 
 it('composes the colors', () => {

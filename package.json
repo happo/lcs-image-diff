@@ -59,26 +59,46 @@
     "prepack": "pnpm run build",
     "test": "vitest run",
     "tsc": "tsc",
+    "lint": "eslint .",
+    "format": "prettier --write .",
     "release": "set -a && source .env && set +a && release-with-ease",
     "serve": "node server.ts",
     "profile": "node profile.ts"
   },
   "prettier": {
-    "trailingComma": "all",
-    "tabWidth": 2,
-    "semi": true,
-    "singleQuote": true,
     "printWidth": 80,
-    "arrowParens": "avoid"
+    "singleQuote": true,
+    "trailingComma": "all",
+    "arrowParens": "always",
+    "overrides": [
+      {
+        "files": [
+          "*.md",
+          "*.mdx"
+        ],
+        "options": {
+          "proseWrap": "never"
+        }
+      }
+    ]
   },
   "dependencies": {
     "imagetracerjs": "^1.2.6"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.13.5",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-depend": "^1.5.0",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
+    "eslint-plugin-unicorn": "^74.0.0",
+    "jiti": "^2.7.0",
+    "prettier": "^3.9.9",
     "release-with-ease": "^2.8.0",
     "sharp": "^0.35.4",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
     "vite": "^8.3.1",
     "vitest": "^5.0.2"
   }

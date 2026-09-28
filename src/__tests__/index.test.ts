@@ -1,15 +1,14 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import path from 'path';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { beforeEach, expect, it } from 'vitest';
 import sharp from 'sharp';
+import { beforeEach, expect, it } from 'vitest';
 
-import imageDiff from '../index.ts';
 import type { HashFunction, ImageDiffResult, ImageInput } from '../index.ts';
+import imageDiff from '../index.ts';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 let image1: ImageInput;
 let image2: ImageInput;
@@ -109,6 +108,6 @@ it('passes threshold and ignoreAntialiasing through to the diff image', () => {
     threshold: 1,
     ignoreAntialiasing: true,
   });
-  expect(counted.trace.data.some(v => v > 0)).toBe(true);
-  expect(thresholded.trace.data.some(v => v > 0)).toBe(false);
+  expect(counted.trace.data.some((v) => v > 0)).toBe(true);
+  expect(thresholded.trace.data.some((v) => v > 0)).toBe(false);
 });

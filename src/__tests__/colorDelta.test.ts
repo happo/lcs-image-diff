@@ -13,19 +13,10 @@ describe('colorDelta', () => {
       [1, 42, 250, 4],
     ];
 
-    for (let i = 0; i < pixels.length; i++) {
-      for (let j = 0; j < pixels.length; j++) {
-        expect(colorDelta(pixels[i], pixels[j])).toEqual(
-          colorDeltaChannels(
-            pixels[i][0],
-            pixels[i][1],
-            pixels[i][2],
-            pixels[i][3],
-            pixels[j][0],
-            pixels[j][1],
-            pixels[j][2],
-            pixels[j][3],
-          ),
+    for (const a of pixels) {
+      for (const b of pixels) {
+        expect(colorDelta(a, b)).toEqual(
+          colorDeltaChannels(a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3]),
         );
       }
     }
