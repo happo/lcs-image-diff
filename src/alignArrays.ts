@@ -18,7 +18,10 @@ const LEFT = 3;
  * ['+', '+', '+'].
  */
 function placeholders(count: number): Array<string> {
-  return Array.from({ length: count }, () => PLACEHOLDER);
+  // `count` is always a number, so `new Array(count)` is not ambiguous here,
+  // and `Array.from({ length }, fn)` is about 30x slower at building the run.
+  // eslint-disable-next-line unicorn/no-new-array
+  return new Array<string>(count).fill(PLACEHOLDER);
 }
 
 /**
