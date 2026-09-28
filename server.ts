@@ -235,7 +235,9 @@ const server = http.createServer((req, res) => {
   }
 
   // Serve snapshot images: /snapshots/<name>/<file>.png
-  const snapshotMatch = pathname.match(/^\/snapshots\/([^/]+)\/(before|after|diff)\.png$/);
+  const snapshotMatch = pathname.match(
+    /^\/snapshots\/([^/]+)\/(before|after|diff)\.png$/,
+  );
   if (snapshotMatch) {
     const [, name, file] = snapshotMatch;
     const filePath = path.join(SNAPSHOTS_DIR, name, `${file}.png`);
@@ -263,6 +265,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   // With PORT=0 the interesting number is the one the OS picked, not the 0.
   const address = server.address();
-  const port = typeof address === 'object' && address !== null ? address.port : PORT;
+  const port =
+    typeof address === 'object' && address !== null ? address.port : PORT;
   console.log(`Diff viewer running at http://localhost:${port}`);
 });

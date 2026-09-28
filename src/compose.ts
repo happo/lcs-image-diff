@@ -32,7 +32,10 @@ function int8Mult(a: number, b: number): number {
  *
  * This version is faster than a version based on floating point math.
  */
-export default function compose(foreground: ColorLike, background: ColorLike): ColorLike {
+export default function compose(
+  foreground: ColorLike,
+  background: ColorLike,
+): ColorLike {
   if (isOpaque(foreground) || isFullyTransparent(background)) {
     return foreground;
   }

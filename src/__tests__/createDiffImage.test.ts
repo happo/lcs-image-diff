@@ -17,8 +17,12 @@ let image2: ImageInput;
 let subject: () => DiffImage;
 
 beforeEach(async () => {
-  const image1Sharp = sharp(path.resolve(__dirname, 'test-images/aa-ffffff.png'));
-  const image2Sharp = sharp(path.resolve(__dirname, 'test-images/aa-f7f7f7.png'));
+  const image1Sharp = sharp(
+    path.resolve(__dirname, 'test-images/aa-ffffff.png'),
+  );
+  const image2Sharp = sharp(
+    path.resolve(__dirname, 'test-images/aa-f7f7f7.png'),
+  );
 
   const [image1Metadata, image2Metadata] = await Promise.all([
     image1Sharp.metadata(),
@@ -58,8 +62,12 @@ it('has a total diff value and a max diff', async () => {
 
 describe('when images are of different width', () => {
   beforeEach(async () => {
-    const image1Sharp = sharp(path.resolve(__dirname, 'test-images/alert-before.png'));
-    const image2Sharp = sharp(path.resolve(__dirname, 'test-images/alert-after.png'));
+    const image1Sharp = sharp(
+      path.resolve(__dirname, 'test-images/alert-before.png'),
+    );
+    const image2Sharp = sharp(
+      path.resolve(__dirname, 'test-images/alert-after.png'),
+    );
 
     const [image1Metadata, image2Metadata] = await Promise.all([
       image1Sharp.metadata(),
@@ -92,8 +100,12 @@ describe('when images are of different width', () => {
 
 describe('when images are of different height', () => {
   beforeEach(async () => {
-    const image1Sharp = sharp(path.resolve(__dirname, 'test-images/button-before.png'));
-    const image2Sharp = sharp(path.resolve(__dirname, 'test-images/button-after.png'));
+    const image1Sharp = sharp(
+      path.resolve(__dirname, 'test-images/button-before.png'),
+    );
+    const image2Sharp = sharp(
+      path.resolve(__dirname, 'test-images/button-after.png'),
+    );
 
     const [image1Metadata, image2Metadata] = await Promise.all([
       image1Sharp.metadata(),
@@ -138,7 +150,9 @@ describe('deciding which pixels count as changed', () => {
   }
 
   function solid(pixel: Pixel): Array<Array<Pixel>> {
-    return Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => pixel));
+    return Array.from({ length: 5 }, () =>
+      Array.from({ length: 5 }, () => pixel),
+    );
   }
 
   // A black-to-white edge whose grey ramp column darkens between the images:

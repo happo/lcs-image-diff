@@ -12,7 +12,10 @@ import { fileURLToPath } from 'node:url';
 import type { ImageDiffResult, ImageInput } from 'lcs-image-diff';
 import imageDiff, { DIFF_TRACE_PADDING } from 'lcs-image-diff';
 import { ALIGNMENT_REPLAY_STAMP as viaMainEntry } from 'lcs-image-diff';
-import { ALIGNMENT_REPLAY_STAMP, canReplayAlignment } from 'lcs-image-diff/alignmentReplay.js';
+import {
+  ALIGNMENT_REPLAY_STAMP,
+  canReplayAlignment,
+} from 'lcs-image-diff/alignmentReplay.js';
 import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
 import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
 // The two `src/` paths are deep imports another codebase in this org already
@@ -33,7 +36,10 @@ async function load(name: string): Promise<ImageInput> {
   return { data, width: metadata.width, height: metadata.height };
 }
 
-const [image1, image2] = await Promise.all([load('google-logo.png'), load('github-logo.png')]);
+const [image1, image2] = await Promise.all([
+  load('google-logo.png'),
+  load('github-logo.png'),
+]);
 
 const result: ImageDiffResult = imageDiff(image1, image2);
 
@@ -45,7 +51,11 @@ assert.ok(result.diff > 0 && result.diff < 1, `diff in range: ${result.diff}`);
 assert.strictEqual(result.maxDiff, 1, 'maxDiff for differently sized images');
 
 // The trace is the other half of the public surface.
-assert.match(result.trace.toSVG(), /^<svg[^>]*viewBox="0 0 100 100"/, 'trace svg');
+assert.match(
+  result.trace.toSVG(),
+  /^<svg[^>]*viewBox="0 0 100 100"/,
+  'trace svg',
+);
 
 assert.strictEqual(DIFF_TRACE_PADDING, 10, 'DIFF_TRACE_PADDING named export');
 // Deprecated, but still has to work until the next major.
@@ -58,7 +68,11 @@ assert.strictEqual(
 // The deep imports have to resolve to working code, not just resolve.
 const delta = colorDeltaChannels(0, 0, 0, 255, 255, 255, 255, 255);
 assert.ok(delta > 0.92, `colorDeltaChannels via deep import: ${delta}`);
-assert.strictEqual(viaShortPath, colorDeltaChannels, 'both subpaths are one module');
+assert.strictEqual(
+  viaShortPath,
+  colorDeltaChannels,
+  'both subpaths are one module',
+);
 
 const injected = computeAndInjectDiffs({ image1, image2 });
 assert.strictEqual(
@@ -71,8 +85,28 @@ assert.strictEqual(
 // load from the built package too.
 {
   const grey = [128, 128, 128, 255];
-  const edgeRow = [0, 0, 0, 255, 0, 0, 0, 255, ...grey, 255, 255, 255, 255, 255, 255, 255, 255];
-  const edge = new Uint8ClampedArray(Array.from({ length: 5 }, () => edgeRow).flat());
+  const edgeRow = [
+    0,
+    0,
+    0,
+    255,
+    0,
+    0,
+    0,
+    255,
+    ...grey,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+  ];
+  const edge = new Uint8ClampedArray(
+    Array.from({ length: 5 }, () => edgeRow).flat(),
+  );
   const words = asPixelWords(edge);
   const size = { width: 5, height: 5 };
   assert.strictEqual(

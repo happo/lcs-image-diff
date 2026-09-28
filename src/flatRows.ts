@@ -13,7 +13,10 @@
 export const FILLER = 1;
 
 /** Whether `rows` are consecutive, equally sized views filling one buffer. */
-function isContiguous(rows: Array<Uint8ClampedArray>, rowBytes = rows[0]?.byteLength): boolean {
+function isContiguous(
+  rows: Array<Uint8ClampedArray>,
+  rowBytes = rows[0]?.byteLength,
+): boolean {
   if (rows.length === 0) {
     return false;
   }
@@ -27,7 +30,11 @@ function isContiguous(rows: Array<Uint8ClampedArray>, rowBytes = rows[0]?.byteLe
   }
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    if (row.buffer !== buffer || row.byteLength !== rowBytes || row.byteOffset !== i * rowBytes) {
+    if (
+      row.buffer !== buffer ||
+      row.byteLength !== rowBytes ||
+      row.byteOffset !== i * rowBytes
+    ) {
       return false;
     }
   }
@@ -55,7 +62,10 @@ export function packRows(
   borrowed?: ArrayBufferLike,
   rowBytes = rows[0]?.length,
 ): Array<Uint8ClampedArray> {
-  if (rows.length === 0 || (isContiguous(rows, rowBytes) && rows[0].buffer !== borrowed)) {
+  if (
+    rows.length === 0 ||
+    (isContiguous(rows, rowBytes) && rows[0].buffer !== borrowed)
+  ) {
     return rows;
   }
   const flat = new Uint8ClampedArray(rowBytes * rows.length);

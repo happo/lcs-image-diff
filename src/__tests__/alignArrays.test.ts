@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import alignArrays from '../alignArrays.ts';
 
-function test(aStr: string, bStr: string, expectedAStr: string, expectedBStr: string): void {
+function test(
+  aStr: string,
+  bStr: string,
+  expectedAStr: string,
+  expectedBStr: string,
+): void {
   const a = aStr.split('');
   const b = bStr.split('');
   alignArrays(a, b);

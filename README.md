@@ -103,7 +103,8 @@ The SVG image is slightly larger than the diff image so that it can properly hig
 ```js
 import { DIFF_TRACE_PADDING } from 'lcs-image-diff';
 
-document.getElementById('#trace-svg').style.margin = `0 ${DIFF_TRACE_PADDING}px`;
+document.getElementById('#trace-svg').style.margin =
+  `0 ${DIFF_TRACE_PADDING}px`;
 ```
 
 `imageDiff.DIFF_TRACE_PADDING` still works, but is deprecated and will be removed in the next major.

@@ -53,10 +53,11 @@ export interface AlignmentReplayStamp {
 }
 
 /** The stamp for alignments this build produces. */
-export const ALIGNMENT_REPLAY_STAMP: Readonly<AlignmentReplayStamp> = Object.freeze({
-  revision: REPLAY_REVISION,
-  replayableFrom: REPLAYABLE_FROM_REVISION,
-});
+export const ALIGNMENT_REPLAY_STAMP: Readonly<AlignmentReplayStamp> =
+  Object.freeze({
+    revision: REPLAY_REVISION,
+    replayableFrom: REPLAYABLE_FROM_REVISION,
+  });
 
 /**
  * Releases that produced alignments before there were stamps to store with
@@ -66,7 +67,10 @@ export const ALIGNMENT_REPLAY_STAMP: Readonly<AlignmentReplayStamp> = Object.fre
  * is the first release that returned an alignment, and nothing about reading
  * one changed through 4.4.2.
  */
-const STAMP_FOR_UNSTAMPED_VERSION: ReadonlyMap<string, Readonly<AlignmentReplayStamp>> = new Map(
+const STAMP_FOR_UNSTAMPED_VERSION: ReadonlyMap<
+  string,
+  Readonly<AlignmentReplayStamp>
+> = new Map(
   ['4.3.0', '4.4.0', '4.4.1', '4.4.2'].map((version) => [
     version,
     Object.freeze({ revision: 1, replayableFrom: 1 }),
@@ -105,7 +109,8 @@ export function canReplayAlignment(
   stamp: AlignmentReplayStamp | string | null | undefined,
   replayer: Readonly<ReplayerRevisions> = THIS_REPLAYER,
 ): boolean {
-  const resolved = typeof stamp === 'string' ? STAMP_FOR_UNSTAMPED_VERSION.get(stamp) : stamp;
+  const resolved =
+    typeof stamp === 'string' ? STAMP_FOR_UNSTAMPED_VERSION.get(stamp) : stamp;
   if (
     resolved == null ||
     !isRevision(resolved.revision) ||
@@ -115,6 +120,7 @@ export function canReplayAlignment(
     return false;
   }
   return (
-    resolved.revision >= replayer.oldestReplayable && resolved.replayableFrom <= replayer.revision
+    resolved.revision >= replayer.oldestReplayable &&
+    resolved.replayableFrom <= replayer.revision
   );
 }

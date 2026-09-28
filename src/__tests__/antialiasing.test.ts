@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { asPixelWords, hasManySiblings, isAntialiased } from '../antialiasing.ts';
+import {
+  asPixelWords,
+  hasManySiblings,
+  isAntialiased,
+} from '../antialiasing.ts';
 
 type Pixel = [number, number, number, number];
 
@@ -18,7 +22,9 @@ function image(rows: Array<Array<Pixel>>) {
 // Black on the left, white on the right, and a grey column between them: the
 // ramp a rasterizer leaves along a vertical edge.
 function edge() {
-  return image(Array.from({ length: 5 }, () => [BLACK, BLACK, GREY, WHITE, WHITE]));
+  return image(
+    Array.from({ length: 5 }, () => [BLACK, BLACK, GREY, WHITE, WHITE]),
+  );
 }
 
 function isAntialiasedIn(
@@ -27,7 +33,15 @@ function isAntialiasedIn(
   x: number,
   y: number,
 ): boolean {
-  return isAntialiased(img.data, x, y, img.size, other.size, img.words, other.words);
+  return isAntialiased(
+    img.data,
+    x,
+    y,
+    img.size,
+    other.size,
+    img.words,
+    other.words,
+  );
 }
 
 describe('asPixelWords', () => {

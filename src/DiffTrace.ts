@@ -24,7 +24,15 @@ export default class DiffTrace {
     this.data = new Uint8ClampedArray(this.width * this.height);
   }
 
-  diff({ row, index, color }: { row: number; index: number; color: Rgba }): void {
+  diff({
+    row,
+    index,
+    color,
+  }: {
+    row: number;
+    index: number;
+    color: Rgba;
+  }): void {
     const dRow = row + DIFF_TRACE_PADDING;
     const dIndex = index + DIFF_TRACE_PADDING * 4;
     for (

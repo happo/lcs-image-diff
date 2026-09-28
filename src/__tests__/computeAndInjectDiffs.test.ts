@@ -32,8 +32,12 @@ let hashFunction: HashFunction | undefined;
 let subject: () => ComputeAndInjectDiffsResult;
 
 beforeEach(async () => {
-  const image1Sharp = sharp(path.resolve(__dirname, '../../static/google-logo.png'));
-  const image2Sharp = sharp(path.resolve(__dirname, '../../static/github-logo.png'));
+  const image1Sharp = sharp(
+    path.resolve(__dirname, '../../static/google-logo.png'),
+  );
+  const image2Sharp = sharp(
+    path.resolve(__dirname, '../../static/github-logo.png'),
+  );
 
   const [image1Metadata, image2Metadata] = await Promise.all([
     image1Sharp.metadata(),
@@ -77,7 +81,11 @@ it('can take a custom hashFunction', async () => {
 
 describe('injected rows', () => {
   // A solid image of `height` rows, with `bandRow` painted `bandColor`.
-  function solidImage(height: number, bandRow: number, bandColor: Array<number>): ImageInput {
+  function solidImage(
+    height: number,
+    bandRow: number,
+    bandColor: Array<number>,
+  ): ImageInput {
     const width = 20;
     const data = Buffer.alloc(width * height * 4);
     for (let y = 0; y < height; y++) {
@@ -95,7 +103,12 @@ describe('injected rows', () => {
 
   // What an injected line is filled with for a white image.
   const injectedColor = [
-    ...[...compose([200, 200, 200, 50], new Uint8ClampedArray([255, 255, 255, 255]))].slice(0, 3),
+    ...[
+      ...compose(
+        [200, 200, 200, 50],
+        new Uint8ClampedArray([255, 255, 255, 255]),
+      ),
+    ].slice(0, 3),
     122,
   ];
 
@@ -119,8 +132,12 @@ describe('injected rows', () => {
       expect(image2InjectedRows.size).toBe(image2Data.length - height2);
 
       // Only the shorter one needed any.
-      expect(Math.min(image1InjectedRows.size, image2InjectedRows.size)).toBe(0);
-      expect(Math.max(image1InjectedRows.size, image2InjectedRows.size)).toBe(6);
+      expect(Math.min(image1InjectedRows.size, image2InjectedRows.size)).toBe(
+        0,
+      );
+      expect(Math.max(image1InjectedRows.size, image2InjectedRows.size)).toBe(
+        6,
+      );
 
       for (const y of image1InjectedRows) {
         expect([...image1Data[y].subarray(0, 4)]).toEqual(injectedColor);
@@ -153,7 +170,9 @@ describe('injected rows', () => {
 
     const contentRows = image1Data
       .map((row, y) => ({ row, y }))
-      .filter(({ row }) => row.subarray(0, 4).every((v, i) => v === injectedColor[i]))
+      .filter(({ row }) =>
+        row.subarray(0, 4).every((v, i) => v === injectedColor[i]),
+      )
       .filter(({ y }) => !image1InjectedRows.has(y));
 
     // The painted row survives as content rather than being called injected.
@@ -181,14 +200,17 @@ describe('row hashing', () => {
     expect(new Set(hashed).size).toBe(256);
   });
 
-  it.each(both)('%s distinguishes rows differing in one byte', (_name, hash) => {
-    const a = new Uint8ClampedArray(64).fill(7);
-    const b = new Uint8ClampedArray(64).fill(7);
-    b[63] = 8;
+  it.each(both)(
+    '%s distinguishes rows differing in one byte',
+    (_name, hash) => {
+      const a = new Uint8ClampedArray(64).fill(7);
+      const b = new Uint8ClampedArray(64).fill(7);
+      b[63] = 8;
 
-    expect(hash(a)).not.toBe(hash(b));
-    expect(hash(a)).toBe(hash(a.slice()));
-  });
+      expect(hash(a)).not.toBe(hash(b));
+      expect(hash(a)).toBe(hash(a.slice()));
+    },
+  );
 
   it('agrees across a row longer than one fromCharCode call', () => {
     // The browser implementation walks the row 8192 bytes at a time.
@@ -251,7 +273,10 @@ describe('row hashing', () => {
 describe('row interning', () => {
   // The default keys rows by identity rather than by their bytes. The result
   // has to be what an exact, collision-free hash produces.
-  const image = (height: number, paint: (y: number, x: number) => Array<number>): ImageInput => {
+  const image = (
+    height: number,
+    paint: (y: number, x: number) => Array<number>,
+  ): ImageInput => {
     const width = 8;
     const data = Buffer.alloc(width * height * 4);
     for (let y = 0; y < height; y++) {
@@ -272,7 +297,10 @@ describe('row interning', () => {
       .map((row) => [...row].join(','))
       .join('|')}`;
 
-  const bothWays = (image1: ImageInput, image2: ImageInput): [string, string] => {
+  const bothWays = (
+    image1: ImageInput,
+    image2: ImageInput,
+  ): [string, string] => {
     const interned = computeAndInjectDiffs({ image1, image2 });
     const exact = computeAndInjectDiffs({
       image1,
@@ -297,7 +325,10 @@ describe('row interning', () => {
     const paint = (offset: number) => (y: number, x: number) =>
       x === 1 ? [(y + offset) & 0xff, 0, 0, 255] : [255, 255, 255, 255];
 
-    const [interned, exact] = bothWays(image(40, paint(0)), image(46, paint(3)));
+    const [interned, exact] = bothWays(
+      image(40, paint(0)),
+      image(46, paint(3)),
+    );
 
     expect(interned).toBe(exact);
   });
@@ -320,8 +351,13 @@ describe('row interning', () => {
         hashRow: hashRowWithCharCodes,
       });
 
-    const comparedBothWays = (image1: ImageInput, image2: ImageInput): [string, string] => [
-      rowsOf(computeAndInjectDiffs({ image1, image2, hashFunction: inBrowser() })),
+    const comparedBothWays = (
+      image1: ImageInput,
+      image2: ImageInput,
+    ): [string, string] => [
+      rowsOf(
+        computeAndInjectDiffs({ image1, image2, hashFunction: inBrowser() }),
+      ),
       rowsOf(
         computeAndInjectDiffs({
           image1,
@@ -344,7 +380,10 @@ describe('row interning', () => {
       const paint = (offset: number) => (y: number, x: number) =>
         x === 1 ? [(y + offset) & 0xff, 0, 0, 255] : [255, 255, 255, 255];
 
-      const [browser, exact] = comparedBothWays(image(40, paint(0)), image(46, paint(3)));
+      const [browser, exact] = comparedBothWays(
+        image(40, paint(0)),
+        image(46, paint(3)),
+      );
 
       expect(browser).toBe(exact);
     });
@@ -354,7 +393,10 @@ describe('row interning', () => {
   // early, or a fingerprint trusted on its own, reads these as one row.
   const internerCases: Array<[string, InternerOptions | undefined]> = [
     ['in Node', undefined],
-    ['without Node', { rowsEqual: rowsEqualInJavaScript, hashRow: hashRowWithCharCodes }],
+    [
+      'without Node',
+      { rowsEqual: rowsEqualInJavaScript, hashRow: hashRowWithCharCodes },
+    ],
   ];
 
   it.each(internerCases)(
@@ -426,8 +468,12 @@ describe('plain array input', () => {
 
     expect(fromArrays.image1Data).toEqual(fromBuffers.image1Data);
     expect(fromArrays.image2Data).toEqual(fromBuffers.image2Data);
-    expect(fromArrays.image1InjectedRows).toEqual(fromBuffers.image1InjectedRows);
-    expect(fromArrays.image2InjectedRows).toEqual(fromBuffers.image2InjectedRows);
+    expect(fromArrays.image1InjectedRows).toEqual(
+      fromBuffers.image1InjectedRows,
+    );
+    expect(fromArrays.image2InjectedRows).toEqual(
+      fromBuffers.image2InjectedRows,
+    );
   });
 
   it('clamps values outside 0..255 rather than wrapping them', () => {
@@ -436,7 +482,10 @@ describe('plain array input', () => {
     // Converting the whole input in one go has to clamp too -- `Uint8Array`
     // would wrap 300 round to 44 instead of holding it at 255.
     const raw = (height: number): Array<number> =>
-      Array.from({ length: 4 * height * 4 }, (_, i) => [300, -5, 1.5, 200][i % 4]);
+      Array.from(
+        { length: 4 * height * 4 },
+        (_, i) => [300, -5, 1.5, 200][i % 4],
+      );
 
     // What the old element-at-a-time copy produced, by definition.
     const clamped = (values: Array<number>): Uint8ClampedArray => {
@@ -458,8 +507,11 @@ describe('plain array input', () => {
       height,
     });
 
-    expect(computeAndInjectDiffs({ image1: asIs(6), image2: asIs(9) }).image1Data).toEqual(
-      computeAndInjectDiffs({ image1: preClamped(6), image2: preClamped(9) }).image1Data,
+    expect(
+      computeAndInjectDiffs({ image1: asIs(6), image2: asIs(9) }).image1Data,
+    ).toEqual(
+      computeAndInjectDiffs({ image1: preClamped(6), image2: preClamped(9) })
+        .image1Data,
     );
   });
 });
@@ -500,11 +552,15 @@ describe('images of different widths', () => {
     [
       'rows shift down',
       image(6, 30, (y) => [(y * 7) & 0xff, 0, 0, 255]),
-      image(8, 36, (y, x) => (x >= 6 ? filler : [((y - 6) * 7) & 0xff, 0, 0, 255])),
+      image(8, 36, (y, x) =>
+        x >= 6 ? filler : [((y - 6) * 7) & 0xff, 0, 0, 255],
+      ),
     ],
     [
       'the wider image is first',
-      image(8, 36, (y, x) => (x >= 6 ? filler : [((y - 6) * 7) & 0xff, 0, 0, 255])),
+      image(8, 36, (y, x) =>
+        x >= 6 ? filler : [((y - 6) * 7) & 0xff, 0, 0, 255],
+      ),
       image(6, 30, (y) => [(y * 7) & 0xff, 0, 0, 255]),
     ],
     [
@@ -512,28 +568,39 @@ describe('images of different widths', () => {
       // Rows differ at byte 1, which the sampler skips, so they all share a
       // fingerprint and the group switches to keying by contents.
       image(3, 40, (y, x) => (x === 0 ? [0, y & 0xff, 0, 255] : white)),
-      image(5, 46, (y, x) => (x >= 3 ? filler : x === 0 ? [0, (y + 3) & 0xff, 0, 255] : white)),
+      image(5, 46, (y, x) =>
+        x >= 3 ? filler : x === 0 ? [0, (y + 3) & 0xff, 0, 255] : white,
+      ),
     ],
     [
       'the narrow rows end in filler bytes themselves',
       image(4, 30, (y, x) => (x === 3 ? filler : [(y * 5) & 0xff, 9, 9, 255])),
-      image(6, 34, (y, x) => (x >= 3 ? filler : [((y - 4) * 5) & 0xff, 9, 9, 255])),
+      image(6, 34, (y, x) =>
+        x >= 3 ? filler : [((y - 4) * 5) & 0xff, 9, 9, 255],
+      ),
     ],
     [
       'the rows mostly correspond already',
       image(6, 30, (y) => [(y * 7) & 0xff, 0, 0, 255]),
-      image(9, 30, (y, x) => (x >= 6 || y === 12 ? filler : [(y * 7) & 0xff, 0, 0, 255])),
+      image(9, 30, (y, x) =>
+        x >= 6 || y === 12 ? filler : [(y * 7) & 0xff, 0, 0, 255],
+      ),
     ],
     [
       'the widths differ by one pixel across a wide row',
       image(700, 24, (y, x) => (x % 61 === y ? [y, 1, 1, 1] : filler)),
-      image(701, 28, (y, x) => ((x % 61) + 3 === y ? [y - 3, 1, 1, 1] : filler)),
+      image(701, 28, (y, x) =>
+        (x % 61) + 3 === y ? [y - 3, 1, 1, 1] : filler,
+      ),
     ],
   ];
 
   const interners: Array<[string, InternerOptions | undefined]> = [
     ['in Node', undefined],
-    ['without Node', { rowsEqual: rowsEqualInJavaScript, hashRow: hashRowWithCharCodes }],
+    [
+      'without Node',
+      { rowsEqual: rowsEqualInJavaScript, hashRow: hashRowWithCharCodes },
+    ],
   ];
 
   describe.each(interners)('interning %s', (_name, options) => {
@@ -568,7 +635,10 @@ describe('images of different widths', () => {
 
     expect([...lengths]).toEqual([5 * 4]);
     expect(tails).toEqual(
-      new Set([[...filler, ...filler].join(','), [...white, ...white].join(',')]),
+      new Set([
+        [...filler, ...filler].join(','),
+        [...white, ...white].join(','),
+      ]),
     );
   });
 
@@ -588,12 +658,16 @@ describe('images of different widths', () => {
   it('takes the background from the padding when the narrower image has no columns', () => {
     const exact = computeAndInjectDiffs({
       image1: image(0, 20, () => white),
-      image2: image(2, 26, (y, x) => (x === 0 && y === 4 ? [9, 9, 9, 255] : filler)),
+      image2: image(2, 26, (y, x) =>
+        x === 0 && y === 4 ? [9, 9, 9, 255] : filler,
+      ),
       hashFunction: hashRowWithBuffer,
     });
     const interned = computeAndInjectDiffs({
       image1: image(0, 20, () => white),
-      image2: image(2, 26, (y, x) => (x === 0 && y === 4 ? [9, 9, 9, 255] : filler)),
+      image2: image(2, 26, (y, x) =>
+        x === 0 && y === 4 ? [9, 9, 9, 255] : filler,
+      ),
     });
 
     expect(everything(interned)).toEqual(everything(exact));

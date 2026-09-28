@@ -24,7 +24,9 @@ describe('colorDelta', () => {
 });
 
 it('is large when comparing black and white', () => {
-  expect(colorDeltaChannels(0, 0, 0, 255, 255, 255, 255, 255)).toBeGreaterThan(0.92);
+  expect(colorDeltaChannels(0, 0, 0, 255, 255, 255, 255, 255)).toBeGreaterThan(
+    0.92,
+  );
 });
 
 it('is small when comparing black and very dark grey', () => {
@@ -48,11 +50,15 @@ it('is one when comparing filler pixel and white', () => {
 });
 
 it('is large when comparing transparent and black', () => {
-  expect(Math.abs(colorDeltaChannels(0, 0, 0, 0, 0, 0, 0, 255))).toBeGreaterThan(0.92);
+  expect(
+    Math.abs(colorDeltaChannels(0, 0, 0, 0, 0, 0, 0, 255)),
+  ).toBeGreaterThan(0.92);
 });
 
 it('is large when comparing white and filler pixel', () => {
-  expect(colorDeltaChannels(255, 255, 255, 255, 1, 1, 1, 1)).toBeGreaterThan(0.92);
+  expect(colorDeltaChannels(255, 255, 255, 255, 1, 1, 1, 1)).toBeGreaterThan(
+    0.92,
+  );
 });
 
 it('is one when comparing filler pixel and some other color', () => {
@@ -68,5 +74,7 @@ it('is negative when comparing white and black', () => {
 });
 
 it('is positive when comparing black and white', () => {
-  expect(colorDeltaChannels(0, 0, 0, 255, 255, 255, 255, 255)).toBeGreaterThan(0);
+  expect(colorDeltaChannels(0, 0, 0, 255, 255, 255, 255, 255)).toBeGreaterThan(
+    0,
+  );
 });

@@ -54,7 +54,11 @@ function imageTo2DArray(
   // its rows as padded without them being so, which is the default. Its
   // padding is then written only by `materialize`.
   if (padSize === 0 && pixels.length >= rowSize * height) {
-    const view = new Uint8ClampedArray(pixels.buffer, pixels.byteOffset, rowSize * height);
+    const view = new Uint8ClampedArray(
+      pixels.buffer,
+      pixels.byteOffset,
+      rowSize * height,
+    );
     const rows: Array<Uint8ClampedArray> = [];
     for (let row = 0; row < height; row += 1) {
       rows.push(view.subarray(row * rowSize, (row + 1) * rowSize));
@@ -70,7 +74,10 @@ function imageTo2DArray(
 
   const newData: Array<Uint8ClampedArray> = [];
   for (let row = 0; row < height; row += 1) {
-    const pixelsInRow = flat.subarray(row * paddedRowSize, (row + 1) * paddedRowSize);
+    const pixelsInRow = flat.subarray(
+      row * paddedRowSize,
+      (row + 1) * paddedRowSize,
+    );
     const start = row * rowSize;
 
     // A row that runs past the end of `data` copies what is there and leaves
@@ -91,7 +98,9 @@ function imageTo2DArray(
 const CHARS_PER_CALL = 8192;
 
 export function hashRowWithBuffer(row: Bytes): string {
-  return Buffer.from(row.buffer, row.byteOffset, row.byteLength).toString('latin1');
+  return Buffer.from(row.buffer, row.byteOffset, row.byteLength).toString(
+    'latin1',
+  );
 }
 
 export function hashRowWithCharCodes(row: Bytes): string {
@@ -116,7 +125,10 @@ export const rowsEqualWithBuffer = (a: Uint8Array, b: Uint8Array): boolean =>
   Buffer.compare(a, b) === 0;
 
 /** Compares two rows in full, without Node's `Buffer`. */
-export const rowsEqualInJavaScript = (a: Uint8Array, b: Uint8Array): boolean => {
+export const rowsEqualInJavaScript = (
+  a: Uint8Array,
+  b: Uint8Array,
+): boolean => {
   if (a.length !== b.length) {
     return false;
   }
@@ -131,7 +143,8 @@ export const rowsEqualInJavaScript = (a: Uint8Array, b: Uint8Array): boolean => 
 const defaultRowsEqual =
   typeof Buffer === 'undefined' ? rowsEqualInJavaScript : rowsEqualWithBuffer;
 
-const defaultHashRow = typeof Buffer === 'undefined' ? hashRowWithCharCodes : hashRowWithBuffer;
+const defaultHashRow =
+  typeof Buffer === 'undefined' ? hashRowWithCharCodes : hashRowWithBuffer;
 
 // How far apart the bytes are that decide which rows are worth comparing.
 // Sampling is what makes this cheap, and being wrong only costs a comparison,
@@ -221,14 +234,22 @@ export function createInterner({
   return hashFunction;
 }
 
-function createPaddedIntern({ rowsEqual, hashRow }: Required<InternerOptions>): PaddedIntern {
+function createPaddedIntern({
+  rowsEqual,
+  hashRow,
+}: Required<InternerOptions>): PaddedIntern {
   const groups = new Map<number, Group>();
   let nextId = 0;
 
   // Whether the two padded rows are equal. Both come out the same length once
   // padded -- they are rows of one alignment -- so wherever one holds bytes the
   // other only has as padding, those bytes must be filler.
-  const paddedEqual = (a: Uint8Array, aPad: number, b: Uint8Array, bPad: number): boolean => {
+  const paddedEqual = (
+    a: Uint8Array,
+    aPad: number,
+    b: Uint8Array,
+    bPad: number,
+  ): boolean => {
     if (aPad === bPad) {
       return rowsEqual(a, b);
     }
@@ -238,7 +259,8 @@ function createPaddedIntern({ rowsEqual, hashRow }: Required<InternerOptions>): 
     const shorter = a.length < b.length ? a : b;
     const longer = a.length < b.length ? b : a;
     return (
-      rowsEqual(shorter, longer.subarray(0, shorter.length)) && isFiller(longer, shorter.length)
+      rowsEqual(shorter, longer.subarray(0, shorter.length)) &&
+      isFiller(longer, shorter.length)
     );
   };
 
@@ -308,7 +330,10 @@ function createPaddedIntern({ rowsEqual, hashRow }: Required<InternerOptions>): 
   };
 }
 
-function transparentLine(rawBgPixel: ColorLike, width: number): Uint8ClampedArray {
+function transparentLine(
+  rawBgPixel: ColorLike,
+  width: number,
+): Uint8ClampedArray {
   const bgPixel = compose([200, 200, 200, 50], rawBgPixel);
   const result = new Uint8ClampedArray(width * 4);
   for (let i = 0; i < width * 4; i += 4) {
@@ -403,7 +428,8 @@ type NeutralRow = Record<string, never>;
 
 /** A gap block: rows one image has and the other does not. */
 type GapSegment =
-  { type: 'before'; rows: Array<BeforeRow> } | { type: 'after'; rows: Array<AfterRow> };
+  | { type: 'before'; rows: Array<BeforeRow> }
+  | { type: 'after'; rows: Array<AfterRow> };
 
 type Segment =
   | GapSegment
@@ -422,7 +448,10 @@ type Segment =
  * reordered or dropped during simplification without losing track of which
  * pixel data to use.
  */
-function buildSegments(unique1: Array<RowKey>, unique2: Array<RowKey>): Array<Segment> {
+function buildSegments(
+  unique1: Array<RowKey>,
+  unique2: Array<RowKey>,
+): Array<Segment> {
   const PH: RowKey = PLACEHOLDER;
   const segments: Array<Segment> = [];
   let i1 = 0;
@@ -493,7 +522,9 @@ function buildSegments(unique1: Array<RowKey>, unique2: Array<RowKey>): Array<Se
 }
 
 function isOppositeType(t1: SegmentType, t2: SegmentType): boolean {
-  return (t1 === 'before' && t2 === 'after') || (t1 === 'after' && t2 === 'before');
+  return (
+    (t1 === 'before' && t2 === 'after') || (t1 === 'after' && t2 === 'before')
+  );
 }
 
 /**
@@ -584,7 +615,9 @@ function segmentsFromRuns(alignment: RowAlignment): Array<Segment> {
     // Counts index into the images, so a bad one is silent corruption rather
     // than a loud failure. These arrive from storage; check them.
     if (!Number.isInteger(length) || length <= 0) {
-      throw new Error(`Alignment run '${op}' has an invalid length: ${String(length)}`);
+      throw new Error(
+        `Alignment run '${op}' has an invalid length: ${String(length)}`,
+      );
     }
 
     switch (type) {
@@ -803,7 +836,11 @@ function reconstructImages(
 interface RowSource {
   rows: Array<Uint8ClampedArray>;
   padBytes: number;
-  key: (row: Uint8ClampedArray, index: number, rows: Array<Uint8ClampedArray>) => RowKey;
+  key: (
+    row: Uint8ClampedArray,
+    index: number,
+    rows: Array<Uint8ClampedArray>,
+  ) => RowKey;
 }
 
 function align({
@@ -884,7 +921,11 @@ function align({
  * reads undefined rows rather than failing -- silent corruption from a mismatch
  * that is cheap to catch here.
  */
-function assertAlignmentFits(alignment: RowAlignment, height1: number, height2: number): void {
+function assertAlignmentFits(
+  alignment: RowAlignment,
+  height1: number,
+  height2: number,
+): void {
   if (alignment.length === 0) {
     // The identity alignment claims the rows already correspond one to one,
     // which cannot be true of images with different numbers of them. Left
@@ -911,7 +952,9 @@ function assertAlignmentFits(alignment: RowAlignment, height1: number, height2: 
     // Counts index into the images, so a bad one is silent corruption rather
     // than a loud failure. These arrive from storage; check them.
     if (!Number.isInteger(length) || length <= 0) {
-      throw new Error(`Alignment run '${op}' has an invalid length: ${String(length)}`);
+      throw new Error(
+        `Alignment run '${op}' has an invalid length: ${String(length)}`,
+      );
     }
 
     outputRows += length;
@@ -1001,7 +1044,10 @@ function applySegments(
  * The first pixel of `row` once padded, which is the one an injected line is
  * tinted from. Only an image with no columns at all has it in its padding.
  */
-function firstPixel(row: Uint8ClampedArray, padBytes: number): Uint8ClampedArray {
+function firstPixel(
+  row: Uint8ClampedArray,
+  padBytes: number,
+): Uint8ClampedArray {
   if (row.length >= 4 || padBytes === 0) {
     return row.slice(0, 4);
   }

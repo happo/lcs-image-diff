@@ -53,7 +53,10 @@ describe('packRows', () => {
 
   it('pads rows narrower than the width asked for with filler', () => {
     const flat = new Uint8ClampedArray([1, 2, 3, 4, 5, 6, 7, 8]);
-    const rows = [flat.subarray(0, 4), new Uint8ClampedArray([9, 9, 9, 9, 9, 9, 9, 9])];
+    const rows = [
+      flat.subarray(0, 4),
+      new Uint8ClampedArray([9, 9, 9, 9, 9, 9, 9, 9]),
+    ];
     const packed = packRows(rows, flat.buffer, 8);
     expectContiguous(packed);
     expect(packed.map((row) => Array.from(row))).toEqual([
@@ -71,7 +74,10 @@ describe('packRows', () => {
   });
 
   it('copies scattered rows into one buffer, in order', () => {
-    const rows = [new Uint8ClampedArray([1, 2, 3, 4]), new Uint8ClampedArray([5, 6, 7, 8])];
+    const rows = [
+      new Uint8ClampedArray([1, 2, 3, 4]),
+      new Uint8ClampedArray([5, 6, 7, 8]),
+    ];
     const packed = packRows(rows);
     expectContiguous(packed);
     expect(packed.map((row) => Array.from(row))).toEqual([
@@ -91,7 +97,10 @@ describe('flatPixels', () => {
   });
 
   it('copies rows that are not contiguous', () => {
-    const rows = [new Uint8ClampedArray([1, 2, 3, 4]), new Uint8ClampedArray([5, 6, 7, 8])];
+    const rows = [
+      new Uint8ClampedArray([1, 2, 3, 4]),
+      new Uint8ClampedArray([5, 6, 7, 8]),
+    ];
     expect(Array.from(flatPixels(rows))).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
   });
 });
@@ -140,10 +149,11 @@ describe('computeAndInjectDiffs', () => {
   });
 
   it('returns each image as views of one buffer after injecting rows', () => {
-    const { image1Data, image2Data, image1InjectedRows } = computeAndInjectDiffs({
-      image1: stripes(4, 30),
-      image2: stripes(4, 36, 0),
-    });
+    const { image1Data, image2Data, image1InjectedRows } =
+      computeAndInjectDiffs({
+        image1: stripes(4, 30),
+        image2: stripes(4, 36, 0),
+      });
     expect(image1InjectedRows.size).toBeGreaterThan(0);
     expectContiguous(image1Data);
     expectContiguous(image2Data);

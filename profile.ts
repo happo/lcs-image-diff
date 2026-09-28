@@ -21,7 +21,10 @@ function hashFunction(data: Uint8ClampedArray): string {
 
 async function loadImage(filePath: string): Promise<ImageInput> {
   const s = sharp(filePath);
-  const [metadata, buffer] = await Promise.all([s.metadata(), s.ensureAlpha().raw().toBuffer()]);
+  const [metadata, buffer] = await Promise.all([
+    s.metadata(),
+    s.ensureAlpha().raw().toBuffer(),
+  ]);
   return { data: buffer, width: metadata.width, height: metadata.height };
 }
 
@@ -58,7 +61,9 @@ async function main(): Promise<void> {
     .filter((name) => fs.statSync(path.join(snapshotsDir, name)).isDirectory());
   snapshots.sort((a, b) => a.localeCompare(b));
 
-  console.log(`Profiling ${snapshots.length} snapshots, ${RUNS_PER_SNAPSHOT} runs each\n`);
+  console.log(
+    `Profiling ${snapshots.length} snapshots, ${RUNS_PER_SNAPSHOT} runs each\n`,
+  );
   console.log(
     `${'Snapshot'.padEnd(40)} ${'Runs'.padStart(4)}  ${'Min'.padStart(9)}  ${'Median'.padStart(9)}  ${'Mean'.padStart(9)}  ${'Max'.padStart(9)}  ${'Size'.padStart(15)}`,
   );
@@ -75,7 +80,10 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const [image1, image2] = await Promise.all([loadImage(beforePath), loadImage(afterPath)]);
+    const [image1, image2] = await Promise.all([
+      loadImage(beforePath),
+      loadImage(afterPath),
+    ]);
 
     const sizeLabel = `${image1.width}x${image1.height} / ${image2.width}x${image2.height}`;
 
@@ -104,8 +112,12 @@ async function main(): Promise<void> {
 
   const slowest = allResults.reduce((a, r) => (r.median > a.median ? r : a));
   const fastest = allResults.reduce((a, r) => (r.median < a.median ? r : a));
-  console.log(`\nSlowest: ${slowest.snapshot} (${formatMs(slowest.median)} median)`);
-  console.log(`Fastest: ${fastest.snapshot} (${formatMs(fastest.median)} median)`);
+  console.log(
+    `\nSlowest: ${slowest.snapshot} (${formatMs(slowest.median)} median)`,
+  );
+  console.log(
+    `Fastest: ${fastest.snapshot} (${formatMs(fastest.median)} median)`,
+  );
 }
 
 await main();

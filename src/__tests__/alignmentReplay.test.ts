@@ -28,9 +28,12 @@ describe('this build', () => {
 });
 
 describe('alignments stored before there were stamps', () => {
-  it.each(['4.3.0', '4.4.0', '4.4.1', '4.4.2'])('replays one produced by %s', (version) => {
-    expect(canReplayAlignment(version)).toBe(true);
-  });
+  it.each(['4.3.0', '4.4.0', '4.4.1', '4.4.2'])(
+    'replays one produced by %s',
+    (version) => {
+      expect(canReplayAlignment(version)).toBe(true);
+    },
+  );
 
   it.each(['4.2.0', '3.0.0', '4.5.0', '', 'toString'])(
     'does not replay one produced by %o',
@@ -51,7 +54,9 @@ describe('stamps that came from storage', () => {
     { revision: 0, replayableFrom: 0 },
     { revision: 1, replayableFrom: 2 },
   ])('refuses %o', (stamp) => {
-    expect(canReplayAlignment(stamp as AlignmentReplayStamp | null | undefined)).toBe(false);
+    expect(
+      canReplayAlignment(stamp as AlignmentReplayStamp | null | undefined),
+    ).toBe(false);
   });
 });
 

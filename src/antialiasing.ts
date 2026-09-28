@@ -32,9 +32,16 @@ const CHANNELS = 4;
  * allowed to throw from inside the pixel walk.
  */
 export function asPixelWords(img: PixelBytes): Uint32Array {
-  const aligned = img.byteOffset % Uint32Array.BYTES_PER_ELEMENT === 0 ? img : new Uint8Array(img);
+  const aligned =
+    img.byteOffset % Uint32Array.BYTES_PER_ELEMENT === 0
+      ? img
+      : new Uint8Array(img);
 
-  return new Uint32Array(aligned.buffer, aligned.byteOffset, aligned.length / CHANNELS);
+  return new Uint32Array(
+    aligned.buffer,
+    aligned.byteOffset,
+    aligned.length / CHANNELS,
+  );
 }
 
 /**
@@ -257,6 +264,7 @@ export function isAntialiased(
   return (
     (hasManySiblings(words, minX, minY, size) &&
       hasManySiblings(otherWords, minX, minY, otherSize)) ||
-    (hasManySiblings(words, maxX, maxY, size) && hasManySiblings(otherWords, maxX, maxY, otherSize))
+    (hasManySiblings(words, maxX, maxY, size) &&
+      hasManySiblings(otherWords, maxX, maxY, otherSize))
   );
 }
