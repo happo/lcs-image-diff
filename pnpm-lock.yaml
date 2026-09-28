@@ -16,8 +16,8 @@ importers:
         specifier: ^24.13.5
         version: 24.13.5
       release-with-ease:
-        specifier: 2.7.2
-        version: 2.7.2
+        specifier: ^2.8.0
+        version: 2.8.0
       sharp:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@24.13.5)
@@ -592,8 +592,8 @@ packages:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
 
-  release-with-ease@2.7.2:
-    resolution: {integrity: sha512-Cs5Nb11374BZia4s4VJxffdfSfkwxnshNjatA7/gs/eMsysh2DPG5hNIAjzdoJ2LgT/AgmfkFR+Orz546QPShw==}
+  release-with-ease@2.8.0:
+    resolution: {integrity: sha512-UqNr4VFSQP6tqdSkByzydXgMRwHkIt9gUZfxwQx65X4zuw5XK6P/sEXYO9Zn/5jK7vRrme1sgByIU88GSodpNA==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -1080,7 +1080,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  release-with-ease@2.7.2: {}
+  release-with-ease@2.8.0: {}
 
   rolldown@1.2.11:
     dependencies:
