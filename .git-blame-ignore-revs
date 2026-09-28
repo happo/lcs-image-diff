@@ -1,0 +1,13 @@
+# Commits that changed many lines mechanically, without changing behavior.
+# GitHub skips them in its blame view on its own; for `git blame` locally, run
+#
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Apply ESLint autofixes
+f971a6aedd7ff40c6f5246ec720bad0d95f44611
+
+# Reformat with Prettier (printWidth 100)
+72cb88377e666ebdb14c553e1b2bbcf81783a92b
+
+# Reformat with Prettier (printWidth 80)
+ae856d642b6384bcc05e39bc31ec572024e803db
