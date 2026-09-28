@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { AlignmentReplayStamp } from '../alignmentReplay.ts';
 import {
   ALIGNMENT_REPLAY_STAMP,
   canReplayAlignment,
@@ -7,7 +8,6 @@ import {
   REPLAY_REVISION,
   REPLAYABLE_FROM_REVISION,
 } from '../alignmentReplay.ts';
-import type { AlignmentReplayStamp } from '../alignmentReplay.ts';
 
 describe('this build', () => {
   it('replays its own alignments', () => {

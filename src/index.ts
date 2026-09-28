@@ -1,17 +1,22 @@
+import type { AlignmentReplayStamp } from './alignmentReplay.ts';
 import {
   ALIGNMENT_REPLAY_STAMP,
   canReplayAlignment,
 } from './alignmentReplay.ts';
-import type { AlignmentReplayStamp } from './alignmentReplay.ts';
-import { DIFF_TRACE_PADDING } from './constants.ts';
-import computeAndInjectDiffs from './computeAndInjectDiffs.ts';
 import type { HashFunction, ImageInput } from './computeAndInjectDiffs.ts';
 import type { RowAlignment } from './computeAndInjectDiffs.ts';
-import createDiffImage from './createDiffImage.ts';
+import computeAndInjectDiffs from './computeAndInjectDiffs.ts';
+import { DIFF_TRACE_PADDING } from './constants.ts';
 import type { ChangedPixelOptions } from './createDiffImage.ts';
+import createDiffImage from './createDiffImage.ts';
 import type DiffTrace from './DiffTrace.ts';
 
 export { DIFF_TRACE_PADDING };
+export type { RowKey } from './alignArrays.ts';
+export type {
+  AlignmentReplayStamp,
+  ReplayerRevisions,
+} from './alignmentReplay.ts';
 export {
   ALIGNMENT_REPLAY_STAMP,
   canReplayAlignment,
@@ -19,13 +24,8 @@ export {
   REPLAY_REVISION,
   REPLAYABLE_FROM_REVISION,
 } from './alignmentReplay.ts';
-export type {
-  AlignmentReplayStamp,
-  ReplayerRevisions,
-} from './alignmentReplay.ts';
-
+export type { PixelBytes, PixelSize } from './antialiasing.ts';
 export type { ColorLike, Rgba } from './compose.ts';
-export type { RowKey } from './alignArrays.ts';
 export type {
   AlignmentOp,
   AlignmentRun,
@@ -33,10 +33,8 @@ export type {
   ImageInput,
   RowAlignment,
 } from './computeAndInjectDiffs.ts';
-export type { default as DiffTrace } from './DiffTrace.ts';
-
 export type { ChangedPixelOptions } from './createDiffImage.ts';
-export type { PixelBytes, PixelSize } from './antialiasing.ts';
+export type { default as DiffTrace } from './DiffTrace.ts';
 
 export interface ImageDiffOptions extends ChangedPixelOptions {
   hashFunction?: HashFunction;

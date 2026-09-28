@@ -1,14 +1,14 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import path from 'path';
+import path from 'node:path';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { beforeEach, describe, expect, it } from 'vitest';
 import sharp from 'sharp';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
 import type { ImageInput } from '../computeAndInjectDiffs.ts';
-import createDiffImage from '../createDiffImage.ts';
+import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
 import type { DiffImage } from '../createDiffImage.ts';
+import createDiffImage from '../createDiffImage.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -146,17 +146,17 @@ describe('deciding which pixels count as changed', () => {
   const WHITE: Pixel = [255, 255, 255, 255];
   const OFF_WHITE: Pixel = [250, 250, 250, 255];
 
-  function rows(pixels: Pixel[][]): Uint8ClampedArray[] {
+  function rows(pixels: Array<Array<Pixel>>): Array<Uint8ClampedArray> {
     return pixels.map(row => new Uint8ClampedArray(row.flat()));
   }
 
-  function solid(pixel: Pixel): Pixel[][] {
+  function solid(pixel: Pixel): Array<Array<Pixel>> {
     return Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => pixel));
   }
 
   // A black-to-white edge whose grey ramp column darkens between the images:
   // what a rasterizer does to the same edge from one run to the next.
-  function edge(ramp: Pixel): Pixel[][] {
+  function edge(ramp: Pixel): Array<Array<Pixel>> {
     return Array.from({ length: 5 }, () => [BLACK, BLACK, ramp, WHITE, WHITE]);
   }
 
@@ -170,7 +170,7 @@ describe('deciding which pixels count as changed', () => {
     return count;
   }
 
-  function pixelAt(result: DiffImage, x: number, y: number): number[] {
+  function pixelAt(result: DiffImage, x: number, y: number): Array<number> {
     const i = (y * result.width + x) * 4;
     return Array.from(result.data.subarray(i, i + 4));
   }

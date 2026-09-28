@@ -1,6 +1,6 @@
 import type { ColorLike } from './compose.ts';
 
-const MAX_YIQ_DIFFERENCE = 35215;
+const MAX_YIQ_DIFFERENCE = 35_215;
 
 function rgb2y(r: number, g: number, b: number): number {
   return r * 0.29889531 + g * 0.58662247 + b * 0.11448223;

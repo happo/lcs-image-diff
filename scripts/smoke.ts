@@ -5,28 +5,26 @@
 // `types` and `exports` actually point at something that loads and runs. This
 // imports by package name rather than by path, so Node and TypeScript both
 // resolve it through `exports` exactly as an installed copy would.
-import assert from 'assert';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import assert from 'node:assert';
+import path from 'node:path';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import sharp from 'sharp';
-
+import type { ImageDiffResult,ImageInput } from 'lcs-image-diff';
 import imageDiff, { DIFF_TRACE_PADDING } from 'lcs-image-diff';
-import type { ImageInput, ImageDiffResult } from 'lcs-image-diff';
-
-// Deep imports another codebase in this org already relies on. They were
-// reachable before this package had an `exports` field, so the subpath
-// entries have to keep them working.
-import computeAndInjectDiffs from 'lcs-image-diff/src/computeAndInjectDiffs.js';
-import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
-import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
-import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
+import { ALIGNMENT_REPLAY_STAMP as viaMainEntry } from 'lcs-image-diff';
 import {
   ALIGNMENT_REPLAY_STAMP,
   canReplayAlignment,
 } from 'lcs-image-diff/alignmentReplay.js';
-import { ALIGNMENT_REPLAY_STAMP as viaMainEntry } from 'lcs-image-diff';
+import { asPixelWords, isAntialiased } from 'lcs-image-diff/antialiasing.js';
+import { colorDeltaChannels as viaShortPath } from 'lcs-image-diff/colorDelta.js';
+import { colorDeltaChannels } from 'lcs-image-diff/src/colorDelta.js';
+// Deep imports another codebase in this org already relies on. They were
+// reachable before this package had an `exports` field, so the subpath
+// entries have to keep them working.
+import computeAndInjectDiffs from 'lcs-image-diff/src/computeAndInjectDiffs.js';
+import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -97,7 +95,7 @@ const thresholded = imageDiff(image1, image2, {
   ignoreAntialiasing: true,
 });
 assert.ok(
-  !thresholded.trace.data.some(v => v > 0),
+  thresholded.trace.data.every(v => !(v > 0)),
   'nothing traced above the largest possible delta',
 );
 

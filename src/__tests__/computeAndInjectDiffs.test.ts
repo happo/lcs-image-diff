@@ -1,24 +1,24 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import path from 'path';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
+import path from 'node:path';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { beforeEach, describe, expect, it } from 'vitest';
 import sharp from 'sharp';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import computeAndInjectDiffs, {
-  createInterner,
-  hashRowWithBuffer,
-  hashRowWithCharCodes,
-  rowsEqualInJavaScript,
-} from '../computeAndInjectDiffs.ts';
+import compose from '../compose.ts';
 import type {
   ComputeAndInjectDiffsResult,
   HashFunction,
   ImageInput,
   InternerOptions,
 } from '../computeAndInjectDiffs.ts';
-import compose from '../compose.ts';
+import computeAndInjectDiffs, {
+  createInterner,
+  hashRowWithBuffer,
+  hashRowWithCharCodes,
+  rowsEqualInJavaScript,
+} from '../computeAndInjectDiffs.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -85,7 +85,7 @@ describe('injected rows', () => {
   function solidImage(
     height: number,
     bandRow: number,
-    bandColor: number[],
+    bandColor: Array<number>,
   ): ImageInput {
     const width = 20;
     const data = Buffer.alloc(width * height * 4);
@@ -116,7 +116,7 @@ describe('injected rows', () => {
 
   // Whichever image is shorter is the one that gets rows, so each set is
   // filled by its own branch and each needs its own case.
-  const shorterImageCases: [string, number, number][] = [
+  const shorterImageCases: Array<[string, number, number]> = [
     ['image1 is shorter', 20, 26],
     ['image2 is shorter', 26, 20],
   ];
@@ -180,14 +180,14 @@ describe('row hashing', () => {
   // Vitest runs under Node, so the module always picks the Buffer
   // implementation. The other one ships to browsers, so it is tested directly
   // and against its counterpart.
-  const both: [string, (row: Uint8ClampedArray) => string][] = [
+  const both: Array<[string, (row: Uint8ClampedArray) => string]> = [
     ['Buffer', hashRowWithBuffer],
     ['fromCharCode', hashRowWithCharCodes],
   ];
 
   it.each(both)('%s keeps every byte value distinct', (_name, hash) => {
     const row = new Uint8ClampedArray(256);
-    for (let i = 0; i < 256; i++) row[i] = i;
+    for (let i = 0; i < 256; i++) {row[i] = i;}
 
     const hashed = hash(row);
     expect(hashed).toHaveLength(256);
@@ -205,16 +205,16 @@ describe('row hashing', () => {
 
   it('agrees across a row longer than one fromCharCode call', () => {
     // The browser implementation walks the row 8192 bytes at a time.
-    const row = new Uint8ClampedArray(20000);
-    for (let i = 0; i < row.length; i++) row[i] = (i * 31) % 256;
+    const row = new Uint8ClampedArray(20_000);
+    for (let i = 0; i < row.length; i++) {row[i] = (i * 31) % 256;}
 
     expect(hashRowWithCharCodes(row)).toBe(hashRowWithBuffer(row));
   });
 
   it('agrees on rows of every length around the slice boundary', () => {
-    for (const length of [0, 1, 8191, 8192, 8193, 16384, 16385]) {
+    for (const length of [0, 1, 8191, 8192, 8193, 16_384, 16_385]) {
       const row = new Uint8ClampedArray(length);
-      for (let i = 0; i < length; i++) row[i] = (i * 17 + 3) % 256;
+      for (let i = 0; i < length; i++) {row[i] = (i * 17 + 3) % 256;}
 
       expect(hashRowWithCharCodes(row)).toBe(hashRowWithBuffer(row));
     }
@@ -262,7 +262,7 @@ describe('row interning', () => {
   // has to be what an exact, collision-free hash produces.
   const image = (
     height: number,
-    paint: (y: number, x: number) => number[],
+    paint: (y: number, x: number) => Array<number>,
   ): ImageInput => {
     const width = 8;
     const data = Buffer.alloc(width * height * 4);
@@ -280,9 +280,9 @@ describe('row interning', () => {
   };
 
   const rowsOf = (result: ComputeAndInjectDiffsResult): string =>
-    result.image1Data.map(row => [...row].join(',')).join('|') +
-    '//' +
-    result.image2Data.map(row => [...row].join(',')).join('|');
+    `${result.image1Data.map(row => [...row].join(',')).join('|') 
+    }//${ 
+    result.image2Data.map(row => [...row].join(',')).join('|')}`;
 
   const bothWays = (
     image1: ImageInput,
@@ -373,7 +373,7 @@ describe('row interning', () => {
 
   // Rows that differ only in their very last byte. A comparison that stops
   // early, or a fingerprint trusted on its own, reads these as one row.
-  const internerCases: [string, InternerOptions | undefined][] = [
+  const internerCases: Array<[string, InternerOptions | undefined]> = [
     ['in Node', undefined],
     [
       'without Node',
@@ -412,7 +412,7 @@ describe('plain array input', () => {
   // supported input even though every other test here hands over a `Buffer`.
   // Rows are copied out with `subarray` when the input can produce a view and
   // sliced when it cannot, which is two code paths that have to agree.
-  const paint = (y: number, x: number): number[] =>
+  const paint = (y: number, x: number): Array<number> =>
     (x + y) % 5 === 0 ? [20, 60 + y, 120, 255] : [255, 255, 255, 255];
 
   const buffered = (width: number, height: number): ImageInput => {
@@ -463,13 +463,13 @@ describe('plain array input', () => {
     // element at a time, where storing it in a `Uint8ClampedArray` clamped it.
     // Converting the whole input in one go has to clamp too -- `Uint8Array`
     // would wrap 300 round to 44 instead of holding it at 255.
-    const raw = (height: number): number[] =>
+    const raw = (height: number): Array<number> =>
       Array.from({ length: 4 * height * 4 }, (_, i) =>
         [300, -5, 1.5, 200][i % 4],
       );
 
     // What the old element-at-a-time copy produced, by definition.
-    const clamped = (values: number[]): Uint8ClampedArray => {
+    const clamped = (values: Array<number>): Uint8ClampedArray => {
       const out = new Uint8ClampedArray(values.length);
       for (let i = 0; i < values.length; i++) {
         out[i] = values[i];
@@ -505,7 +505,7 @@ describe('images of different widths', () => {
   const image = (
     width: number,
     height: number,
-    paint: (y: number, x: number) => number[],
+    paint: (y: number, x: number) => Array<number>,
   ): ImageInput => {
     const data = Buffer.alloc(width * height * 4);
     for (let y = 0; y < height; y++) {
@@ -529,7 +529,7 @@ describe('images of different widths', () => {
 
   // Pairs chosen so a narrow row, once padded, is sometimes exactly a wide
   // row: the wide image's extra columns are painted with the filler.
-  const cases: [string, ImageInput, ImageInput][] = [
+  const cases: Array<[string, ImageInput, ImageInput]> = [
     [
       'rows shift down',
       image(6, 30, y => [(y * 7) & 0xff, 0, 0, 255]),
@@ -568,7 +568,7 @@ describe('images of different widths', () => {
     ],
   ];
 
-  const interners: [string, InternerOptions | undefined][] = [
+  const interners: Array<[string, InternerOptions | undefined]> = [
     ['in Node', undefined],
     [
       'without Node',

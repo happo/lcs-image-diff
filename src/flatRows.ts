@@ -14,7 +14,7 @@ export const FILLER = 1;
 
 /** Whether `rows` are consecutive, equally sized views filling one buffer. */
 function isContiguous(
-  rows: Uint8ClampedArray[],
+  rows: Array<Uint8ClampedArray>,
   rowBytes = rows[0]?.byteLength,
 ): boolean {
   if (rows.length === 0) {
@@ -58,10 +58,10 @@ function isContiguous(
  * `asPixelWords` can view it without copying.
  */
 export function packRows(
-  rows: Uint8ClampedArray[],
+  rows: Array<Uint8ClampedArray>,
   borrowed?: ArrayBufferLike,
   rowBytes = rows[0]?.length,
-): Uint8ClampedArray[] {
+): Array<Uint8ClampedArray> {
   if (
     rows.length === 0 ||
     (isContiguous(rows, rowBytes) && rows[0].buffer !== borrowed)
@@ -83,13 +83,13 @@ export function packRows(
  * The rows as one flat buffer: a view of the one they already share when they
  * are contiguous (see `packRows`), otherwise a copy.
  */
-export function flatPixels(rows: Uint8ClampedArray[]): Uint8ClampedArray {
+export function flatPixels(rows: Array<Uint8ClampedArray>): Uint8ClampedArray {
   if (isContiguous(rows)) {
     const { buffer } = rows[0];
     return new Uint8ClampedArray(buffer, 0, buffer.byteLength);
   }
   const rowBytes = rows[0]?.length ?? 0;
   const flat = new Uint8ClampedArray(rowBytes * rows.length);
-  rows.forEach((row, i) => flat.set(row, i * rowBytes));
+  for (const [i, row] of rows.entries()) {flat.set(row, i * rowBytes);}
   return flat;
 }

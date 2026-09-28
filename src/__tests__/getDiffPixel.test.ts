@@ -2,13 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { colorDeltaChannels } from '../colorDelta.ts';
 import compose from '../compose.ts';
-
-import getDiffPixel, { writeDiffPixel } from '../getDiffPixel.ts';
 import type { DiffPixel } from '../getDiffPixel.ts';
+import getDiffPixel, { writeDiffPixel } from '../getDiffPixel.ts';
 
 let subject: () => DiffPixel;
-let previousPixel: number[];
-let currentPixel: number[];
+let previousPixel: Array<number>;
+let currentPixel: Array<number>;
 
 beforeEach(() => {
   previousPixel = [255, 255, 255, 255];

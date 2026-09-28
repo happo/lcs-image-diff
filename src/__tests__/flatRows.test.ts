@@ -25,15 +25,15 @@ function stripes(width: number, height: number, offset = 0) {
   return { data, width, height };
 }
 
-function expectContiguous(rows: Uint8ClampedArray[]) {
+function expectContiguous(rows: Array<Uint8ClampedArray>) {
   const rowBytes = rows[0].byteLength;
   const { buffer } = rows[0];
   expect(rows[0].byteOffset % 4).toBe(0);
   expect(buffer.byteLength).toBe(rowBytes * rows.length);
-  rows.forEach((row, i) => {
+  for (const [i, row] of rows.entries()) {
     expect(row.buffer).toBe(buffer);
     expect(row.byteOffset).toBe(rows[0].byteOffset + i * rowBytes);
-  });
+  }
 }
 
 describe('packRows', () => {
@@ -167,11 +167,11 @@ describe('computeAndInjectDiffs', () => {
 describe('computeAndInjectDiffs, counting what it allocates', () => {
   // Every buffer of at least `minBytes` created while `run` runs. Views onto
   // an existing buffer are not allocations and are not counted.
-  function bigAllocations(minBytes: number, run: () => void): number[] {
-    const Original = globalThis.Uint8ClampedArray;
-    const sizes: number[] = [];
+  function bigAllocations(minBytes: number, run: () => void): Array<number> {
+    const Original = Uint8ClampedArray;
+    const sizes: Array<number> = [];
     class Counting extends Original {
-      constructor(...args: unknown[]) {
+      constructor(...args: Array<unknown>) {
         // @ts-expect-error -- forwards whichever overload was called
         super(...args);
         if (!ArrayBuffer.isView(args[0]) && !(args[0] instanceof ArrayBuffer) &&

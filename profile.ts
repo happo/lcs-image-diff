@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 
-import imageDiff from './src/index.ts';
 import type { ImageInput } from './src/index.ts';
+import imageDiff from './src/index.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,11 +40,11 @@ interface Stats {
   median: number;
 }
 
-function stats(times: number[]): Stats {
+function stats(times: Array<number>): Stats {
   const sorted = [...times].sort((a, b) => a - b);
   const mean = times.reduce((a, b) => a + b, 0) / times.length;
   const min = sorted[0];
-  const max = sorted[sorted.length - 1];
+  const max = sorted.at(-1);
   const median = sorted[Math.floor(sorted.length / 2)];
   return { mean, min, max, median };
 }
@@ -67,7 +67,7 @@ async function main(): Promise<void> {
   );
   console.log('-'.repeat(105));
 
-  const allResults: Result[] = [];
+  const allResults: Array<Result> = [];
 
   for (const snapshot of snapshots) {
     const beforePath = path.join(snapshotsDir, snapshot, 'before.png');
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
 
     const sizeLabel = `${image1.width}x${image1.height} / ${image2.width}x${image2.height}`;
 
-    const times: number[] = [];
+    const times: Array<number> = [];
     for (let i = 0; i < RUNS_PER_SNAPSHOT; i++) {
       const t0 = performance.now();
       imageDiff(image1, image2, { hashFunction });

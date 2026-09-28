@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import http from 'http';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,7 +14,7 @@ const __dirname = dirname(__filename);
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3456;
 const SNAPSHOTS_DIR = join(__dirname, 'snapshots');
 
-function getSnapshots(): string[] {
+function getSnapshots(): Array<string> {
   return fs
     .readdirSync(SNAPSHOTS_DIR)
     .filter((name: string) => {

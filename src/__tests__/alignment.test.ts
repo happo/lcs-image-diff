@@ -1,16 +1,16 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import path from 'path';
+import path from 'node:path';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
+import { describe, expect, it } from 'vitest';
 
+import type { ImageInput, RowAlignment } from '../computeAndInjectDiffs.ts';
+import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
 import imageDiff, {
   ALIGNMENT_REPLAY_STAMP,
   REPLAY_REVISION,
 } from '../index.ts';
-import computeAndInjectDiffs from '../computeAndInjectDiffs.ts';
-import type { ImageInput, RowAlignment } from '../computeAndInjectDiffs.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -159,7 +159,7 @@ function rowsImage(runs: Array<[number, number]>): ImageInput {
 }
 
 /** The first byte of each row, which `rowsImage` makes the row's identity. */
-function rowValues(rows: Uint8ClampedArray[]): number[] {
+function rowValues(rows: Array<Uint8ClampedArray>): Array<number> {
   return rows.map(row => row[0]);
 }
 

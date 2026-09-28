@@ -5,7 +5,7 @@ export type Rgba = readonly [number, number, number, number];
  * Anything four channel values can be read out of. Rows of pixel data are
  * passed in directly, so this covers them as well as standalone colors.
  */
-export type ColorLike = Rgba | number[] | Uint8ClampedArray;
+export type ColorLike = Rgba | Array<number> | Uint8ClampedArray;
 
 function isOpaque(color: ColorLike): boolean {
   return color[3] === 255;

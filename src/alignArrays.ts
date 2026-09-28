@@ -17,8 +17,8 @@ const LEFT = 3;
  * Constructs an array of placeholder strings, e.g.
  * ['+', '+', '+'].
  */
-function placeholders(count: number): string[] {
-  return new Array<string>(count).fill(PLACEHOLDER);
+function placeholders(count: number): Array<string> {
+  return Array.from({length: count}).fill(PLACEHOLDER);
 }
 
 /**
@@ -61,7 +61,7 @@ function placeholders(count: number): string[] {
  *   colOff(i) = max(0, i - halfDrift - 1)
  *   index(i, j) = j - colOff(i)
  */
-export default function alignArrays(a: RowKey[], b: RowKey[]): void {
+export default function alignArrays(a: Array<RowKey>, b: Array<RowKey>): void {
   const aLength = a.length;
   const bLength = b.length;
 
@@ -82,7 +82,7 @@ export default function alignArrays(a: RowKey[], b: RowKey[]): void {
   const checkpoints = new Int32Array(checkpointCount * bandWidth);
 
   const colOffFor = (i: number): number =>
-    i - halfDrift - 1 > 0 ? i - halfDrift - 1 : 0;
+    i - halfDrift > 1 ? i - halfDrift - 1 : 0;
 
   /**
    * Fills `cur` with memo row `i`, reading memo row `i - 1` from `prev`, and
@@ -248,7 +248,7 @@ export default function alignArrays(a: RowKey[], b: RowKey[]): void {
     const shorterArray = aLen > bLen ? b : a;
     const diff = Math.abs(aLen - bLen);
     if (a[0] === b[0]) {
-      shorterArray.splice(shorterArray.length - 1, 0, ...placeholders(diff));
+      shorterArray.splice(- 1, 0, ...placeholders(diff));
     } else {
       shorterArray.splice(0, 0, ...placeholders(diff));
     }

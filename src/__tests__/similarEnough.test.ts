@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import similarEnough from '../similarEnough.ts';
 
 let subject: () => boolean;
-let image1Data: number[][];
-let image2Data: number[][];
+let image1Data: Array<Array<number>>;
+let image2Data: Array<Array<number>>;
 
 const BLACK = [0, 0, 0, 255];
 const WHITE = [255, 255, 255, 255];

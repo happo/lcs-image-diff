@@ -8,7 +8,7 @@ const BLACK: Pixel = [0, 0, 0, 255];
 const GREY: Pixel = [128, 128, 128, 255];
 const WHITE: Pixel = [255, 255, 255, 255];
 
-function image(rows: Pixel[][]) {
+function image(rows: Array<Array<Pixel>>) {
   const height = rows.length;
   const width = rows[0].length;
   const data = new Uint8ClampedArray(rows.flat(2));

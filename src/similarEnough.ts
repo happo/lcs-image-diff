@@ -29,8 +29,8 @@ export default function similarEnough({
   image1Data,
   image2Data,
 }: {
-  image1Data: ArrayLike<number>[];
-  image2Data: ArrayLike<number>[];
+  image1Data: Array<ArrayLike<number>>;
+  image2Data: Array<ArrayLike<number>>;
 }): boolean {
   const { length } = image1Data;
   if (length !== image2Data.length) {
