@@ -58,9 +58,12 @@ assert.match(
 );
 
 assert.strictEqual(DIFF_TRACE_PADDING, 10, 'DIFF_TRACE_PADDING named export');
-// Deprecated, but still has to work until the next major.
+// Deprecated, but still has to work until the next major. `tsc -p
+// tsconfig.smoke.json` checks the annotation against the built declarations,
+// so the alias has to keep the literal type it had before TypeScript 6.
+const deprecatedPadding: 10 = imageDiff.DIFF_TRACE_PADDING;
 assert.strictEqual(
-  imageDiff.DIFF_TRACE_PADDING,
+  deprecatedPadding,
   DIFF_TRACE_PADDING,
   'deprecated imageDiff.DIFF_TRACE_PADDING alias',
 );
